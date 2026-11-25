@@ -970,135 +970,140 @@ El ULID aporta orden temporal aproximado y 80 bits de aleatoriedad; la unicidad 
 - La publicación nunca reemplaza; si el destino existe, se aborta y se conserva el original.
 - El índice derivado puede regenerarse desde `lifecycle.jsonl`; nunca es la fuente de verdad.
 
+
+
 ### 7.8 Registro de ciclo de vida
 
-`models/registry/lifecycle.jsonl` es append-only, una línea JSON por evento. Cada línea debe cumplir la canonicalización siguiente para garantizar la integridad criptográfica de la cadena.
+`models/registry/lifecycle.jsonl` es un registro append-only, una l?nea JSON por evento, que registra la historia completa del ciclo de vida de cada run identificado por `model_id`. El registro sirve como fuente de verdad para la verificaci?n de estado, autenticidad y recuperaci?n ante fallos.
 
-#### 7.8.1 Estructura de cada evento
+#### 7.8.1 Arquitectura de la cadena de eventos
 
-Cada evento debe contener los siguientes campos, en el orden canónico especificado:
+El registro utiliza una **cadena de eventos monot?nica por model_id**. Cada `model_id` tiene su propia cadena independiente; no hay una cadena global ?nica que abarque todos los modelos. Esto evita la confusi?n entre secuencia global y secuencia por modelo, y permite que la verificaci?n sea escalable y decidible.
 
-| Campo | Tipo | Obligatorio | Descripción |
-|---|---|---|---|
-| `sequence_number` | integer | Sí | Número entero monotónico, comienza en 1 para cada `model_id`. Cada nuevo evento incrementa en 1. |
-| `previous_event_sha256` | string | Sí (excepto para el evento 1) | SHA-256 hex de 64 caracteres del evento anterior en el registro. Para el primer evento (`sequence_number == 1`), este campo debe ser `"0"*64`. |
-| `event_id` | string | Sí | Identificador único del evento, format `evt_` + ULID. |
-| `model_id` | string | Sí | Identificador del run al que pertenece este evento. |
-| `event` | string | Sí | Nombre de la transición: `sealed`, `validated`, `approved`, `deprecated` o `revoked`. |
-| `at` | string | Sí | Marca de tiempo RFC 3339 UTC con microsegundos y sufijo `Z`. |
-| `manifest_sha256` | string | Sí | SHA-256 hex de 64 caracteres del manifiesto asociado a este evento. |
-| `actor` | string | Sí | Quienoriginó el evento: `pipeline`, `verifier`, `human:<id>`, o `system`. |
-| `evidence` | object\|null | No | Evidencia asociada (informe firmado, aprobación firmada, etc.). Debe ser `null` si `event` es `sealed`. |
-| `event_sha256` | string | Sí | SHA-256 hex de 64 caracteres de la **canonicalización completa** del evento (todos los campos exceptuando `event_sha256` sí, y `previous_event_sha256` se omite de la hashía para el cálculo del primer evento). |
+**Secuencia:** El `sequence_number` es monot?nico y empieza en 1 para cada `model_id`. Cada nuevo evento appended incrementa el `sequence_number` en 1 respecto al evento anterior para ese mismo `model_id`. No hay brechas permitidas: si el ?ltimo evento tiene `sequence_number = N`, el pr?ximo debe tener `sequence_number = N+1`.
 
-#### 7.8.2 Canonicalización de cada evento
+**Cadena de hashes:** Cada evento encadena al anterior mediante `previous_event_sha256`, que es el SHA-256 hex de 64 caracteres de la canonicalizaci?n completa del evento anterior. El primer evento de un `model_id` tiene `previous_event_sha256 = "0"*64`.
 
-La canonicalización sigue estas reglas estrictas para el cálculo de `event_sha256` y `previous_event_sha256`:
+**Evento ?nico:** Cada evento debe tener un `event_id` ?nico (formato `evt_` + ULID). La duplicaci?n de `event_id` en la cadena para el mismo `model_id` es una violaci?n grave y debe provocar el rechazo de la carga.
 
-1. **Orden de campos fijo:** `sequence_number`, `previous_event_sha256`, `event_id`, `model_id`, `event`, `at`, `manifest_sha256`, `actor`, `evidence`.
-2. **Eliminación de claves duplicadas:** Si algún campo aparece más de una vez, el evento es inválido.
-3. **Prohibido NaN, Infinity:** Cualquier valor numérico debe ser finito. Si `evidence` es un objeto, sus valores numéricos deben ser finitos.
-4. **Strings sin BOM:** Todos los strings deben ser UTF-8 sin BOM.
-5. **Separadores:** Los strings se concatenan usando `,` y los números se formatean sin espacios innecesarios.
-6. **Null handling:** `null` se representa como la string literal `null` (sin comillas).
-7. **Evidence serialización:** Si `evidence` no es null, se serializa como JSON canonical con claves ordenadas por punto de código y separadores `,:` sin espacios. Si es null, se usa la representación `null` sin comillas.
-8. **Cálculo de event_sha256:** Se calcula el SHA-256 de la string resultante de la canonicalización. **El propio `event_sha256` no se incluye en la string que se hashea** (evita el ciclo circular).
-9. **Cálculo de previous_event_sha256:** Para el evento N>1, se calcula el SHA-256 de la canonicalización del evento N-1. Para el evento 1, `previous_event_sha256` es `"0"*64` y su SHA-256 **no** se usa para verificar la cadena (el verification starts from event 2).
+#### 7.8.2 Canonicalizaci?n RFC 8785 (JKCS)
 
-#### 7.8.3 Firma criptográfica (opcional, requisito para `approved`)
+La canonicalizaci?n de cada evento para los prop?sitos de `event_sha256` y `previous_event_sha256` sigue el **JSON Canonicalization Scheme (RFC 8785)** adaptado para este contexto. Este esquema garantiza que la misma estructura de datos siempre produzca la misma representaci?n binaria, independientemente de la plataforma o lenguaje empleado.
 
-- Si `event == "approved"`, el evento **debe** incluir un campo `signature` con el valor `"sig_"` + firma Ed25519 base64url de la canonicalización completa del evento (incluyendo `event_sha256`).
-- La clave privada corresponding debe residir fuera del repositorio Git y fuera del control del pipeline no confiable.
-- Para eventos `sealed`, `validated` y `deprecated`, el campo `signature` es opcional pero su presencia no debe interferir en la validación de la cadena.
-- Un evento `approved` sin firma Ed25519 válida debe ser rechazado por el loader independientemente de los hashes.
+**Regules de canonicalizaci?n:**
 
-#### 7.8.4 Verificación de continuidad de la cadena
+1. **Codificaci?n:** UTF-8 sin BOM.
+2. **Estructura del documento:** El evento se representa como un objeto JSON con los campos en el orden can?nico especificado a continuaci?n. Se proh?ben las claves duplicadas.
+3. **Tipos de datos:**
+   - **N?meros enteros:** Se serializan como n?meros enteros JSON sin cifrado leading zero (excepto el cero mismo: `0`), ni espacios innecesarios. Ejemplo: `42`, no `042` ni ` 42`.
+   - **N?meros de punto flotante:** No est?n permitidos en el evento. Si se requiere un n?mero real, debe convertirse a una representaci?n de fixed-point (entero) con precisi?n documentada, o excluirse.
+   - **Strings:** Se codifican como cadenas JSON UTF-8 sin BOM. Los caracteres especiales deben escaparse seg?n la especificaci?n JSON est?ndar (RFC 8259). No se permite la inclusi?n de l?neas enteras sin procesar.
+   - **null:** Se representa como el literal JSON `null` (cuatro letras min?sculas, sin comillas circundantes).
+4. **Orden de campos can?nico:** Los campos aparecen en el siguiente orden obligatorio. Este orden es parte integral de la canonicalizaci?n; cambiar el orden produce una cadena diferente.
+   `sequence_number`, `previous_event_sha256`, `event_id`, `model_id`, `event`, `at`, `manifest_sha256`, `actor`, `evidence`.
+5. **Separadores:** Los separadores de objeto y elementos deben ser `,` (coma) y `:` (dos puntos) seg?n el est?ndar JSON, sin espacios adicionales alrededor de los separadores en la representaci?n can?nica (esto es consistente con la canonicalizaci?n RFC 8785 Level 1).
+6. **Evidence serializaci?n:**
+   - Si `evidence` es `null`, se representa como la palabra `null` en la posici?n can?nica.
+   - Si `evidence` es un objeto JSON, debe serializarse usando la canonicalizaci?n JSON RFC 8785 recursivamente (mismo orden de campos, mismos separadores, sin espacio despu?s de los dos puntos ni antes de las comas).
+   - No se permiten valores `NaN` o `Infinity` en ning?n nivel del objeto `evidence`.
+7. **Exclusi?n del propio `event_sha256`:** El campo `event_sha256` **no forma parte** de la string que se hashea para producir itself. La canonicalizaci?n se calcula sobre los 9 campos enumerados en el paso 4, sin incluir `event_sha256`. Esto evita el ciclo circular y es consistente con la dise?o del contrato.
 
-El loader (o cualquier verificador) debe verificar la cadena de la siguiente manera:
+**Procedimiento de canonicalizaci?n paso a paso:**
 
-1. Leer el primer evento (`sequence_number == 1`). Verificar que `previous_event_sha256 == "0"*64`.
-2. Calcular `event_sha256` del evento 1 y verificar que coincide con el valor declarado.
-3. Para cada evento subsiguiente (N > 1):
-   a. Verificar que `sequence_number == previous_event_sha256`'s successor (es decir, la cadena es continua).
-   b. Verificar que `previous_event_sha256` coincida con el `event_sha256` calculado del evento anterior.
-   c. Calcular `event_sha256` y verificar que coincide con el valor declarado.
-4. Si en cualquier punto la cadena se rompe (hash mismatch, sequence gap, evento duplicado), el loader debe rechazar la carga y registrar `E_CHAIN_BROKEN`.
+1. Tomar el objeto evento con sus 9 campos en el orden can?nico.
+2. Serializar el objeto a JSON usando las reglas de la regla 4 (orden de campos, sin espacios despu?s de `:` ni antes de `,`, sin BOM, UTF-8).
+3. Si `evidence` no es `null`, reemplazar el valor del campo `evidence` por la serializaci?ncan?nica recursiva del objeto `evidence` (mismo proceso recursivo).
+4. El resultado es una string UTF-8.
+5. Calcular `event_sha256 = SHA-256(canonical_string)`.
+6. Para el evento N>1, calcular `previous_event_sha256 = SHA-256(canonical_string_del_evento_anterior)`. Para el evento 1, `previous_event_sha256 = "0"*64`.
 
-#### 7.8.5 Detección de ataques al registro
+#### 7.8.3 Verificaci?n de la cadena de eventos
 
-| Ataque | Detección |
-|---|---|
-| **Truncamiento** | Si `sequence_number` no crece en 1 de evento a evento, o hay un gap (>1 entre sequence_numbers consecutivos), se detecta truncamiento. |
-| **Eliminación** | Si se observa un `event_sha256` que no puede derivarse del anterior, se indica posible eliminación. El loader debe fallar cerrado. |
-| **Sustitución** | Si el `manifest_sha256` de un evento no coincide con el manifiesto actual para ese `model_id`, se detecta sustitución. |
-| **Reordenamiento** | Si los `sequence_number` no están en orden estrictamente creciente, se detecta reordenamiento. El loader debe reordenar por `sequence_number` y verificar la continuidad; si la cadena está rota después del reordenamiento, rechazar. |
-| **Duplicados** | Si dos eventos tienen el mismo `sequence_number`, el evento más reciente (por timestamp `at`) se conserva y el anterior se marca como `superseded` en un campo opcional; el loader debe rechazar ambas si la integridad no puede verificarse. |
+El loader (o cualquier verificador) debe verificar la cadena de la siguiente manera para cada `model_id`:
 
-#### 7.8.6 Anclaje externo del último hash conocido
+1. **Leer todos los eventos** para ese `model_id` del `lifecycle.jsonl`, ordenados por `sequence_number` (que debe ser estrictamente creciente).
+2. **Verificar el evento 1:**
+   - Confirmar que `sequence_number == 1`.
+   - Confirmar que `previous_event_sha256 == "0"*64`.
+   - Calcular `event_sha256` usando la canonicalizaci?n RFC 8785 y comparar con el valor declarado.
+3. **Para cada evento subsiguiente (N > 1):**
+   - Confirmar que `sequence_number == previous_event_sha256`'s successor, i.e., la secuencia es continua sin brechas (no hay n?mero sequence_saltado).
+   - Confirmar que `previous_event_sha256` coincide con el `event_sha256` calculado del evento anterior.
+   - Calcular `event_sha256` y comparar con el valor declarado.
+4. **Si en cualquier punto la cadena se rompe** (hash mismatch, sequence gap, evento duplicado, event_id duplicado), el loader debe:
+   - **Rechazar la carga** de ese run con c?digo de error `E_CHAIN_BROKEN`.
+   - **No intentes reordenar ni "reparar" la cadena autom?ticamente.**
+   - **Registrar el evento de fallo** para auditor?a, pero no continuar en un estado de incertidumbre.
 
-- El último `event_sha256` de la cadena local debe comparsearse (anclarse) en un almacén externo de confianza (por ejemplo, un registro Merkle root en un servicio de tiempo, un hash grabado en una transacción Git firmada, o un hash en un almacén WORM).
-- Si el almacén externo no está disponible, el loader debe funcionar en modo *integrity-only*: puede verificar hashes e invariantes, pero **no** debe permitir la deserialización de runs con estado `approved` a menos que la cadena de ciclo de vida sea autenticada mediante firma Ed25519 en cada evento `approved`.
-- El anclaje externo debe actualizarse cada vez que se agrega un nuevo evento al registro. El propio registro no puede ser la fuente de anclaje externa (evita el ciclo).
+#### 7.8.4 Detecci?n de ataques y integridad del registro
 
-#### 7.8.7 Política ante eventos duplicados o fuera de orden
-
-- Si se detecta un `sequence_number` ya existente en la cadena para ese `model_id`, el loader debe:
-  1. Comparar los timestamps `at`; el evento más reciente (más reciente cronológicamente) se conserva en la posición del `sequence_number`.
-  2. El evento anterior se mueve a una posición `sequence_number` extra (si el formato lo permite) o se descarta con un evento de `revoked` motivado.
-  3. Si los timestamps son idénticos, el evento con `manifest_sha256` que tenga mayor entropía (más bits significativos en 1) se conserva.
-- El loader debe registrar el evento de conflicto en un log separado (fuera del `lifecycle.jsonl`) para auditoría, pero no debe permitir la deserialización de un run cuyo registro tenga conflictos de secuencia sin resolver.
-
-#### 7.8.8 Qué ocurre si el registro no puede verificarse
-
-- Si el `lifecycle.jsonl` no existe, está vacío, o su integridad criptográfica no puede verificarse (por ejemplo, no se puede calcular el `event_sha256` canonical de los eventos, o la cadena está rota), el loader debe:
-  1. **No deserializar** ningún run que tenga estado `approved` o `validated` con fines de inferencia o evaluación.
-  2. Permitir la inspección de solo metadata (`audit` purpose) de runs `sealed` si los hashes de artefactos y el manifiesto son válidos.
-  3. Registrar el evento de fallo de verificación con código de error `E_CHAIN_UNAVAILABLE`.
-- Si el registro está disponible pero no firmado (carece de firmas Ed25519 en eventos `approved`), el loader debe limitarse a `audit` purpose y rechazar `inference` o `evaluation` que requiera confianza en la procedencia.
-
----
-
-### 7.8.9 Ejemplo de evento canonicalizado (sealed, primer evento)
-
-```json
-{"sequence_number":1,"previous_event_sha256":"0000000000000000000000000000000000000000000000000000000000000000","event_id":"evt_01JQ8Z4A1B2C3D4E5F6G7H8J9K","model_id":"mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W","event":"sealed","at":"2026-11-25T18:04:13.000000Z","manifest_sha256":"9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a","actor":"pipeline","evidence":null}
-```
-
-La canonicalización para el hash sería:
-`1,000000000000000000000000000000000000000000000000000000000000000,evt_01JQ8Z4A1B2C3D4E5F6G7H8J9K,mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W,sealed,2026-11-25T18:04:13.000000Z,9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a,null`
-
-Y su `event_sha256` sería el SHA-256 de esa string.
-
-#### 7.8.10 Distinción de tipos de integridad
-
-| Tipo | Descripción | Soporte en loader |
+| Ataque | Detecci?n | Acci?n del loader |
 |---|---|---|
-| **Append-only lógico** | El registro solo crece; no se editan líneas pasadas. | Sí, el loader rechaza escrituras in-place. |
-| **Integridad criptográfica** | Cadena de hashes `previous_event_sha256 → event_sha256` verificable. | Sí, el loader verifica antes de cualquier operación. |
-| **Autenticidad** | Firmas Ed25519 en eventos `approved` con clave fuera del repo. | Sí, requisito obligatorio para `approved` purpose. |
-| **Inmutabilidad respaldada por almacenamiento externo** | Anclaje en servicio externo (Git firmado, tiempo, WORM). | No indispensable, pero recomendado para seguridad alta. |
+| **Truncamiento** (eliminaci?n de eventos finales) | Una cadena local **no puede detectar por s? sola** la eliminaci?n de su propia cola. La ?nica defensa es un **anclaje externo** (ver ?7.8.6). Si se sospecha truncamiento (por ejemplo, el run esperaba m?s eventos pero el registro se detuvo), y no hay anclaje externo v?lido, el loader debe cambiar al modo *integrity-only*. | Modo integrity-only: sin deserializaci?n `approved`/`validated`. Permitir solo `audit` con verificaci?n de hashes. |
+| **Eliminaci?n de eventos del medio** | Si `sequence_number` salta de N a M donde M > N+1, se detecta brecha. | Rechazar con `E_CHAIN_BROKEN`. |
+| **Sustituci?n de evento** | Si el `event_sha256` calculado no coincide con el declarado, o el `previous_event_sha256` no coincide con el `event_sha256` del anterior. | Rechazar con `E_CHAIN_BROKEN`. |
+| **Reordenamiento** | Si los `sequence_number` no son estrictamente crecientes despu?s de ordenar por `at` (marca de tiempo). | Rechazar con `E_CHAIN_BROKEN`. No reordenar autom?ticamente. |
+| **Duplicados de `sequence_number`** | Si dos eventos tienen el mismo `sequence_number` para el mismo `model_id`. | Rechazar ambos eventos con `E_CHAIN_DUPLICATE`. |
+| **Duplicados de `event_id`** | Si dos eventos tienen el mismo `event_id` para el mismo `model_id`. | Rechazar ambos eventos con `E_EVENT_ID_DUPLICATE`. |
+| **Falsificaci?n de `previous_event_sha256`** | Si el `previous_event_sha256` no es el hash del evento anterior calculado canonicalmente. | Rechazar con `E_CHAIN_BROKEN`. |
 
-**Regla transversal:** la ausencia de anclaje externo o cadena rota obliga al loader a modo *integrity-only* y deniega `approved`/`inference` sin firma verificada.
+#### 7.8.5 Recuperaci?n ante cadena rota
 
-### 7.9 Política de conservación
+Si el loader detecta que la cadena de eventos est? rota (cualquier violaci?n de las reglas de la secci?n 7.8.4):
 
-| Categoría | Conservación | Regla de borrado |
-|---|---|---|
-| `.staging/<id>.<nonce>/` | Hasta la publicación o 24 h | Si envejece, se mueve a `.failed` con `orphaned_staging` |
-| `.failed/<id>.<nonce>/` | 30 días por defecto, configurable | Solo el job de GC; nunca se reutiliza su `model_id` |
-| `runs/<id>/` en `sealed` o `validated` | Indefinida | Requiere evento `rejected`/`revoked` firmado; no lo borra el GC |
-| `runs/<id>/` en `approved` | Indefinida mientras esté operativo | Requiere `deprecated` con sustituto o `revoked` motivado |
-| `runs/<id>/` en `deprecated` o `revoked` | Indefinida, solo lectura | Se conserva para auditoría; nunca se purga automáticamente |
-| `registry/lifecycle.jsonl` | Indefinida, append-only | Nunca se trunca ni se reescribe; las copias se verifican por hash |
-| `registry/approvals/` | Indefinida | Igual que el evento `approved` al que referencia |
-| Legacy `_t7`…`_testcal` y `QUARANTINE.*` | Indefinida | Solo decisión humana explícita; AUD-04B.1 no los toca |
+1. **No deserializar** el run con fines de `inference` o `evaluation` que requieran confianza en la procedencia.
+2. Permitir **inspecci?n de solo metadata** (`audit` purpose) si los hashes de artefactos y el manifiesto son v?lidos, aunque la cadena de eventos no sea verificable.
+3. **Registrar** el fallo de verificaci?n con:
+   - `model_id`
+   - `sequence_number` donde se rompi? la cadena
+   - `error_code` (`E_CHAIN_BROKEN`)
+   - `acci?n` ("rechazado", "modo integrity-only")
+4. **No generar eventos compensatorios** ni "reparar" la cadena automaticamente. La recuperaci?n requiere revisi?n expl?cita por parte de un operador humano con acceso al anclaje externo.
 
-**Reglas de GC:** el recolector actúa solo sobre `.staging` y `.failed`; nunca elimina un directorio que tenga evento `sealed` o posterior en el registro; un borrado debe dejar un evento de eliminación con `manifest_sha256` y actor; y el `model_id` jamás se reasigna, incluso después de borrar los bytes.
+#### 7.8.6 Anclaje externo del ?ltimo hash conocido
 
----
+Una cadena de hashes local **no puede detectar por s? sola** la eliminaci?n de eventos de su propia cola final, ni puede garantizar que el evento m?s reciente sea el "?ltimo verdadero" sin un mecanismo de externalidad.
 
-## 8. Loader
+**Mecanismo de anclaje externo:**
 
+- Cada vez que se agrega un nuevo evento al `lifecycle.jsonl`, su `event_sha256` debe **anclarse** (registrarse) en un almac?n de confianza externo. Las opciones incluyen:
+  - Una transacci?n en un **Git firmado** del repositorio can?nico (el commit que contiene el `lifecycle.jsonl` actualizado).
+  - Un **registro Merkle root** en un servicio de tiempo distribuido (e.g., AWS Quantum Ledger Database, o servicios equivalentes).
+  - Un **hash grabado en un almac?n WORM** (Write Once Read Many) de alta disponibilidad.
+  - Una **firma digital** del evento m?s reciente por una clave fuera del control del pipeline (clave privada fuera del repositorio, en un HSM o keychain del sistema operativo).
+
+- El propio `lifecycle.jsonl` **no puede ser** la fuente de anclaje externo (evita el ciclo circular).
+
+- Si el anclaje externo no est? disponible en un momento dado, el loader debe operar en **modo integrity-only**:
+  - **No deserializar** runs con estado `approved` o `validated` para `inference` o `evaluation`.
+  - Permitir **solo `audit` purpose** con verificaci?n de hashes de artefactos y manifiesto.
+  - Registrar el evento con c?digo `E_ANCHOR_UNAVAILABLE`.
+
+- El anclaje externo debe actualizarse **cada vez** que se agrega un nuevo evento. La frecuencia de actualizaci?n y el m?todo espec?fico son decisiones de pol?tica operativa, pero la regla fundamental es: **ning?n nuevo evento debe agregarse al registro sin que su `event_sha256` sea anclado externamente** (o el sistema opere en modo conservativo `integrity-only` hasta que el anclaje se restablezca).
+
+#### 7.8.7 Pol?tica ante eventos duplicados o fuera de orden
+
+**Reglas obligatorias (sin excepciones):**
+
+1. **Un `sequence_number` duplicado** para el mismo `model_id` implica **rechazo inmediato**. No se selecciona "el m?s reciente por timestamp" ni "el de mayor entrop?a". Ambos eventos son inv?lidos y el loader debe rechazarlos con `E_CHAIN_DUPLICATE`.
+
+2. **Un `event_id` duplicado** para el mismo `model_id` implica **rechazo inmediato**. Tanto si los `sequence_number` son diferentes como si son iguales, la duplicaci?n de `event_id` invalida la carga.
+
+3. **Un evento fuera de orden** (i.e., despu?s de leer todos los eventos para un `model_id`, ordenarlos por `sequence_number` revela que un evento tiene un `sequence_number` que no es exactamente 1 m?s que el precedente) implica **rechazo inmediato** con `E_CHAIN_BROKEN`.
+
+4. **No reordenar autom?ticamente** el registro. El orden de inserci?n es el orden l?gico. Las marcas de tiempo `at` se registran para referencia, pero no desplazan la secuencia `sequence_number`.
+
+5. **No descartar ni sustituir eventos autom?ticamente.** Si un evento falta (brecha en la secuencia), el loader debe rechazar la cadena, no llenar el hueco con un evento imaginario.
+
+6. **No crear eventos compensatorios** para ocultar corrupci?n. No se permite a?adir eventos `revoked` o `superseded` para "arreglar" una cadena rota. La corrupci?n debe reportarse tal como se detect?.
+
+7. **La recuperaci?n debe requerir revisi?n expl?cita y evidencia verificable.** Si la cadena est? rota, un operador humano debe:
+   - Verificar el anclaje externo m?s reciente.
+   - Determinar si los eventos faltantes fueron intencionales o por error.
+   - Decidir si el run puede operar en modo `integrity-only` o debe rechazarse completamente.
+   - **Ninguna de estas decisiones puede ser autom?tica** ni tomada por el loader.
+
+**Regla transversal:** cualquier violaci?n de estas reglas implica rechazo de la carga con c?digo de error `E_CHAIN_POLICY_VIOLATION`, y el loader debe cambiar al modo *integrity-only* hasta que se resuelva la discrepancia mediante revisi?n humana con anclaje externo.
 ### 8.1 Contrato
 
 ```text
