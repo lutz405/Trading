@@ -1,0 +1,13 @@
+{
+  "schema_version": 2,
+  "method": "sigmoid",
+  "reason": "",
+  "classes": [
+    0,
+    1,
+    2
+  ],
+  "fitted": true,
+  "n_calibrators": 3,
+  "joblib_sha256": "1e1d23c95ab5ac9d78a3be99870e7916a66da02527ce04b2bf072f2c54e089bf"
+}

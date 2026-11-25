@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "method": "sigmoid",
+  "reason": "",
+  "classes": [
+    0,
+    1,
+    2
+  ],
+  "fitted": true
+}

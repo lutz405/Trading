@@ -1,0 +1,7 @@
+initial_capital: 10000.0
+fee: 0.001
+slippage: 0.0005
+train_window: 200
+test_window: 50
+step: 50
+benchmarks: [buy_and_hold, no_trade, simple_ma]

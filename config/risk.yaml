@@ -1,0 +1,10 @@
+initial_capital: 10000.0
+risk_per_trade: 0.01
+max_drawdown: 0.15
+max_daily_loss: 0.03
+max_exposure: 0.5
+volatility_threshold: 0.05
+uncertainty_threshold: 0.5
+cooldown_periods: 5
+atr_stop_mult: 1.5
+atr_take_profit_mult: 3.0

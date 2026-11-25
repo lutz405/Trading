@@ -1,0 +1,88 @@
+{
+  "features": [
+    "ret_1",
+    "log_ret_1",
+    "sma_20",
+    "ema_20",
+    "rsi_14",
+    "macd",
+    "macd_signal",
+    "macd_hist",
+    "atr_14",
+    "bb_upper",
+    "bb_mid",
+    "bb_lower",
+    "adx_14",
+    "vwap",
+    "vol_mean",
+    "vol_rel",
+    "vol_pct_change",
+    "vol_zscore",
+    "vol_anomaly",
+    "high_low_range",
+    "close_open_diff"
+  ],
+  "horizon": 5,
+  "label_config": {
+    "vol_mult": 0.5
+  },
+  "gpu_used": true,
+  "rf_params": {
+    "n_estimators": 3,
+    "max_depth": 8,
+    "class_weight": "balanced",
+    "random_state": 42,
+    "n_jobs": -1
+  },
+  "xgb_params": {
+    "n_estimators": 3,
+    "max_depth": 6,
+    "learning_rate": 0.05,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "random_state": 42
+  },
+  "versions": {
+    "sklearn": "1.9.1",
+    "xgboost": "3.4.1"
+  },
+  "metrics": {
+    "accuracy": 0.3194444444444444,
+    "precision": 0.17611940298507464,
+    "recall": 0.30375,
+    "f1": 0.17743830787309048,
+    "confusion_matrix": [
+      [
+        22,
+        0,
+        3
+      ],
+      [
+        14,
+        0,
+        1
+      ],
+      [
+        31,
+        0,
+        1
+      ]
+    ],
+    "brier": 0.22136825819810232,
+    "log_loss": 1.089770793914795,
+    "classes_present": [
+      0,
+      1,
+      2
+    ],
+    "roc_auc": 0.4585144844417486,
+    "pr_auc": 0.3383553284056256,
+    "ece": 0.12962689912981457
+  },
+  "calibration": {
+    "method": "sigmoid",
+    "fitted": true,
+    "reason": "",
+    "n_calibrators": 3
+  }
+}

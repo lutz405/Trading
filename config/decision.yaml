@@ -1,0 +1,13 @@
+long_threshold: 0.55
+short_threshold: 0.55
+uncertainty_threshold: 0.5
+timeframe_weights:
+  1m: 0.05
+  5m: 0.1
+  15m: 0.15
+  30m: 0.15
+  1h: 0.2
+  4h: 0.2
+  1d: 0.15
+conflict_penalty: 0.1
+model_version: "v0.1"
