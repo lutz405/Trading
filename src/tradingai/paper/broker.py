@@ -60,11 +60,18 @@ class PaperBroker:
 
     @property
     def cash(self) -> float:
+        """Total cash held by the broker, including committed collateral."""
         return self.capital
 
     @property
     def collateral(self) -> float:
+        """Cash collateral committed by all open short positions."""
         return sum(p.qty * p.entry_price for p in self.positions if p.side == "short")
+
+    @property
+    def free_cash(self) -> float:
+        """Cash available for new entries after short collateral is reserved."""
+        return self.capital - self.collateral
 
     @property
     def realized_equity(self) -> float:
@@ -226,7 +233,7 @@ class PaperBroker:
                     side=side,
                     price=price,
                     equity=self.equity(entry),
-                    cash=self.capital,
+                    cash=self.free_cash,
                     risk_budget_ratio=self.risk_budget_ratio,
                     max_exposure_ratio=self.max_exposure_ratio,
                     fee_rate=self.fee,
@@ -260,8 +267,9 @@ class PaperBroker:
         validate_number(new_fees_paid, "new_fees_paid", nonnegative=True)
         validate_number(new_slippage_cost, "new_slippage_cost", nonnegative=True)
         # Both long entries and cash-collateralised shorts must cover the full
-        # notional plus the fee with free cash.
-        if notional + fee > self.capital:
+        # notional plus the fee with cash that is not already reserved by an
+        # open short position.
+        if notional + fee > self.free_cash:
             return False
         self.capital = new_capital
         self.positions.append(Position(side, entry, qty, stop, take, entry_fee=fee, entry_slippage=slip))
