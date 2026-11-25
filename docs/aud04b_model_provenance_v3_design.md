@@ -376,16 +376,42 @@ Las particiones se expresan en coordenadas de fila etiquetada. Si el índice del
     "name": "future_return_threshold",
     "horizon_bars": 5,
     "vol_mult": "0.5",
-    "classes": [0, 1, 2],
-    "class_order": [0, 1, 2],
+    "classes": [
+      0,
+      1,
+      2
+    ],
+    "class_order": [
+      0,
+      1,
+      2
+    ],
     "rule_sha256": "7777777777777777777777777777777777777777777777777777777777777777",
     "nan_policy": "drop_label"
   },
   "features": {
     "ordered": [
-      "feat_01", "feat_02", "feat_03", "feat_04", "feat_05", "feat_06", "feat_07",
-      "feat_08", "feat_09", "feat_10", "feat_11", "feat_12", "feat_13", "feat_14",
-      "feat_15", "feat_16", "feat_17", "feat_18", "feat_19", "feat_20", "feat_21"
+      "feat_01",
+      "feat_02",
+      "feat_03",
+      "feat_04",
+      "feat_05",
+      "feat_06",
+      "feat_07",
+      "feat_08",
+      "feat_09",
+      "feat_10",
+      "feat_11",
+      "feat_12",
+      "feat_13",
+      "feat_14",
+      "feat_15",
+      "feat_16",
+      "feat_17",
+      "feat_18",
+      "feat_19",
+      "feat_20",
+      "feat_21"
     ],
     "count": 21,
     "definition_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
@@ -428,7 +454,10 @@ Las particiones se expresan en coordenadas de fila etiquetada. Si el índice del
     },
     "ensemble": {
       "method": "mean_probability",
-      "weights": {"rf": "0.5", "xgb": "0.5"}
+      "weights": {
+        "rf": "0.5",
+        "xgb": "0.5"
+      }
     },
     "seed": 42,
     "environment": {
@@ -466,7 +495,11 @@ Las particiones se expresan en coordenadas de fila etiquetada. Si el índice del
         "n_rows": 2548,
         "time_start": "2026-01-01T00:00:00Z",
         "time_end": "2026-04-17T03:00:00Z",
-        "class_counts": [1530, 340, 678],
+        "class_counts": [
+          1530,
+          340,
+          678
+        ],
         "index_sha256": "8888888888888888888888888888888888888888888888888888888888888888"
       },
       "validation": {
@@ -475,7 +508,11 @@ Las particiones se expresan en coordenadas de fila etiquetada. Si el índice del
         "n_rows": 852,
         "time_start": "2026-04-17T08:00:00Z",
         "time_end": "2026-05-22T19:00:00Z",
-        "class_counts": [510, 115, 227],
+        "class_counts": [
+          510,
+          115,
+          227
+        ],
         "index_sha256": "9999999999999999999999999999999999999999999999999999999999999999"
       },
       "calibration": {
@@ -484,7 +521,11 @@ Las particiones se expresan en coordenadas de fila etiquetada. Si el índice del
         "n_rows": 852,
         "time_start": "2026-04-17T08:00:00Z",
         "time_end": "2026-05-22T19:00:00Z",
-        "class_counts": [510, 115, 227],
+        "class_counts": [
+          510,
+          115,
+          227
+        ],
         "index_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "shared_with": "validation"
       },
@@ -494,7 +535,11 @@ Las particiones se expresan en coordenadas de fila etiquetada. Si el índice del
         "n_rows": 852,
         "time_start": "2026-05-23T00:00:00Z",
         "time_end": "2026-06-27T11:00:00Z",
-        "class_counts": [520, 118, 214],
+        "class_counts": [
+          520,
+          118,
+          214
+        ],
         "index_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
       }
     },
@@ -528,8 +573,16 @@ Las particiones se expresan en coordenadas de fila etiquetada. Si el índice del
     "method": "sigmoid",
     "fit_partition": "validation",
     "calibration_input_sha256": "a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718",
-    "classes": [0, 1, 2],
-    "class_order": [0, 1, 2],
+    "classes": [
+      0,
+      1,
+      2
+    ],
+    "class_order": [
+      0,
+      1,
+      2
+    ],
     "n_calibrators": 3,
     "artifact_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
   },
@@ -585,22 +638,58 @@ Las particiones se expresan en coordenadas de fila etiquetada. Si el índice del
       "n_samples": 852,
       "models": {
         "rf": {
-          "artifacts": {"rf": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"},
+          "artifacts": {
+            "rf": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          },
           "accuracy": 0.6479,
           "macro_f1": 0.6301,
           "log_loss": 0.8421,
           "brier": 0.2314,
           "ece": 0.0512,
-          "confusion_matrix": [[240, 70, 40], [60, 160, 35], [45, 50, 152]]
+          "confusion_matrix": [
+            [
+              240,
+              70,
+              40
+            ],
+            [
+              60,
+              160,
+              35
+            ],
+            [
+              45,
+              50,
+              152
+            ]
+          ]
         },
         "xgb": {
-          "artifacts": {"xgb": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"},
+          "artifacts": {
+            "xgb": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          },
           "accuracy": 0.6655,
           "macro_f1": 0.6512,
-          "log_loss": 0.7710,
+          "log_loss": 0.771,
           "brier": 0.2088,
           "ece": 0.0431,
-          "confusion_matrix": [[245, 65, 40], [55, 165, 35], [40, 50, 157]]
+          "confusion_matrix": [
+            [
+              245,
+              65,
+              40
+            ],
+            [
+              55,
+              165,
+              35
+            ],
+            [
+              40,
+              50,
+              157
+            ]
+          ]
         },
         "calibrated_ensemble": {
           "artifacts": {
@@ -608,14 +697,35 @@ Las particiones se expresan en coordenadas de fila etiquetada. Si el índice del
             "xgb": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
             "calibrator": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
           },
-          "accuracy": 0.6772,
+          "accuracy": 0.6725,
           "macro_f1": 0.6604,
           "log_loss": 0.7123,
           "brier": 0.1902,
           "ece": 0.0318,
-          "confusion_matrix": [[250, 65, 35], [55, 165, 32], [40, 48, 162]]
+          "confusion_matrix": [
+            [
+              250,
+              65,
+              35
+            ],
+            [
+              56,
+              165,
+              34
+            ],
+            [
+              41,
+              48,
+              158
+            ]
+          ]
         }
-      }
+      },
+      "class_counts": [
+        350,
+        255,
+        247
+      ]
     },
     "test": {
       "partition_index_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
@@ -627,14 +737,35 @@ Las particiones se expresan en coordenadas de fila etiquetada. Si el índice del
             "xgb": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
             "calibrator": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
           },
-          "accuracy": 0.6890,
+          "accuracy": 0.689,
           "macro_f1": 0.6712,
           "log_loss": 0.6844,
           "brier": 0.1781,
           "ece": 0.0287,
-          "confusion_matrix": [[250, 60, 40], [50, 170, 35], [35, 45, 167]]
+          "confusion_matrix": [
+            [
+              250,
+              60,
+              40
+            ],
+            [
+              50,
+              170,
+              35
+            ],
+            [
+              35,
+              45,
+              167
+            ]
+          ]
         }
-      }
+      },
+      "class_counts": [
+        350,
+        255,
+        247
+      ]
     }
   }
 }
@@ -841,29 +972,113 @@ El ULID aporta orden temporal aproximado y 80 bits de aleatoriedad; la unicidad 
 
 ### 7.8 Registro de ciclo de vida
 
-`models/registry/lifecycle.jsonl` es append-only, una línea JSON por evento:
+`models/registry/lifecycle.jsonl` es append-only, una línea JSON por evento. Cada línea debe cumplir la canonicalización siguiente para garantizar la integridad criptográfica de la cadena.
+
+#### 7.8.1 Estructura de cada evento
+
+Cada evento debe contener los siguientes campos, en el orden canónico especificado:
+
+| Campo | Tipo | Obligatorio | Descripción |
+|---|---|---|---|
+| `sequence_number` | integer | Sí | Número entero monotónico, comienza en 1 para cada `model_id`. Cada nuevo evento incrementa en 1. |
+| `previous_event_sha256` | string | Sí (excepto para el evento 1) | SHA-256 hex de 64 caracteres del evento anterior en el registro. Para el primer evento (`sequence_number == 1`), este campo debe ser `"0"*64`. |
+| `event_id` | string | Sí | Identificador único del evento, format `evt_` + ULID. |
+| `model_id` | string | Sí | Identificador del run al que pertenece este evento. |
+| `event` | string | Sí | Nombre de la transición: `sealed`, `validated`, `approved`, `deprecated` o `revoked`. |
+| `at` | string | Sí | Marca de tiempo RFC 3339 UTC con microsegundos y sufijo `Z`. |
+| `manifest_sha256` | string | Sí | SHA-256 hex de 64 caracteres del manifiesto asociado a este evento. |
+| `actor` | string | Sí | Quienoriginó el evento: `pipeline`, `verifier`, `human:<id>`, o `system`. |
+| `evidence` | object\|null | No | Evidencia asociada (informe firmado, aprobación firmada, etc.). Debe ser `null` si `event` es `sealed`. |
+| `event_sha256` | string | Sí | SHA-256 hex de 64 caracteres de la **canonicalización completa** del evento (todos los campos exceptuando `event_sha256` sí, y `previous_event_sha256` se omite de la hashía para el cálculo del primer evento). |
+
+#### 7.8.2 Canonicalización de cada evento
+
+La canonicalización sigue estas reglas estrictas para el cálculo de `event_sha256` y `previous_event_sha256`:
+
+1. **Orden de campos fijo:** `sequence_number`, `previous_event_sha256`, `event_id`, `model_id`, `event`, `at`, `manifest_sha256`, `actor`, `evidence`.
+2. **Eliminación de claves duplicadas:** Si algún campo aparece más de una vez, el evento es inválido.
+3. **Prohibido NaN, Infinity:** Cualquier valor numérico debe ser finito. Si `evidence` es un objeto, sus valores numéricos deben ser finitos.
+4. **Strings sin BOM:** Todos los strings deben ser UTF-8 sin BOM.
+5. **Separadores:** Los strings se concatenan usando `,` y los números se formatean sin espacios innecesarios.
+6. **Null handling:** `null` se representa como la string literal `null` (sin comillas).
+7. **Evidence serialización:** Si `evidence` no es null, se serializa como JSON canonical con claves ordenadas por punto de código y separadores `,:` sin espacios. Si es null, se usa la representación `null` sin comillas.
+8. **Cálculo de event_sha256:** Se calcula el SHA-256 de la string resultante de la canonicalización. **El propio `event_sha256` no se incluye en la string que se hashea** (evita el ciclo circular).
+9. **Cálculo de previous_event_sha256:** Para el evento N>1, se calcula el SHA-256 de la canonicalización del evento N-1. Para el evento 1, `previous_event_sha256` es `"0"*64` y su SHA-256 **no** se usa para verificar la cadena (el verification starts from event 2).
+
+#### 7.8.3 Firma criptográfica (opcional, requisito para `approved`)
+
+- Si `event == "approved"`, el evento **debe** incluir un campo `signature` con el valor `"sig_"` + firma Ed25519 base64url de la canonicalización completa del evento (incluyendo `event_sha256`).
+- La clave privada corresponding debe residir fuera del repositorio Git y fuera del control del pipeline no confiable.
+- Para eventos `sealed`, `validated` y `deprecated`, el campo `signature` es opcional pero su presencia no debe interferir en la validación de la cadena.
+- Un evento `approved` sin firma Ed25519 válida debe ser rechazado por el loader independientemente de los hashes.
+
+#### 7.8.4 Verificación de continuidad de la cadena
+
+El loader (o cualquier verificador) debe verificar la cadena de la siguiente manera:
+
+1. Leer el primer evento (`sequence_number == 1`). Verificar que `previous_event_sha256 == "0"*64`.
+2. Calcular `event_sha256` del evento 1 y verificar que coincide con el valor declarado.
+3. Para cada evento subsiguiente (N > 1):
+   a. Verificar que `sequence_number == previous_event_sha256`'s successor (es decir, la cadena es continua).
+   b. Verificar que `previous_event_sha256` coincida con el `event_sha256` calculado del evento anterior.
+   c. Calcular `event_sha256` y verificar que coincide con el valor declarado.
+4. Si en cualquier punto la cadena se rompe (hash mismatch, sequence gap, evento duplicado), el loader debe rechazar la carga y registrar `E_CHAIN_BROKEN`.
+
+#### 7.8.5 Detección de ataques al registro
+
+| Ataque | Detección |
+|---|---|
+| **Truncamiento** | Si `sequence_number` no crece en 1 de evento a evento, o hay un gap (>1 entre sequence_numbers consecutivos), se detecta truncamiento. |
+| **Eliminación** | Si se observa un `event_sha256` que no puede derivarse del anterior, se indica posible eliminación. El loader debe fallar cerrado. |
+| **Sustitución** | Si el `manifest_sha256` de un evento no coincide con el manifiesto actual para ese `model_id`, se detecta sustitución. |
+| **Reordenamiento** | Si los `sequence_number` no están en orden estrictamente creciente, se detecta reordenamiento. El loader debe reordenar por `sequence_number` y verificar la continuidad; si la cadena está rota después del reordenamiento, rechazar. |
+| **Duplicados** | Si dos eventos tienen el mismo `sequence_number`, el evento más reciente (por timestamp `at`) se conserva y el anterior se marca como `superseded` en un campo opcional; el loader debe rechazar ambas si la integridad no puede verificarse. |
+
+#### 7.8.6 Anclaje externo del último hash conocido
+
+- El último `event_sha256` de la cadena local debe comparsearse (anclarse) en un almacén externo de confianza (por ejemplo, un registro Merkle root en un servicio de tiempo, un hash grabado en una transacción Git firmada, o un hash en un almacén WORM).
+- Si el almacén externo no está disponible, el loader debe funcionar en modo *integrity-only*: puede verificar hashes e invariantes, pero **no** debe permitir la deserialización de runs con estado `approved` a menos que la cadena de ciclo de vida sea autenticada mediante firma Ed25519 en cada evento `approved`.
+- El anclaje externo debe actualizarse cada vez que se agrega un nuevo evento al registro. El propio registro no puede ser la fuente de anclaje externa (evita el ciclo).
+
+#### 7.8.7 Política ante eventos duplicados o fuera de orden
+
+- Si se detecta un `sequence_number` ya existente en la cadena para ese `model_id`, el loader debe:
+  1. Comparar los timestamps `at`; el evento más reciente (más reciente cronológicamente) se conserva en la posición del `sequence_number`.
+  2. El evento anterior se mueve a una posición `sequence_number` extra (si el formato lo permite) o se descarta con un evento de `revoked` motivado.
+  3. Si los timestamps son idénticos, el evento con `manifest_sha256` que tenga mayor entropía (más bits significativos en 1) se conserva.
+- El loader debe registrar el evento de conflicto en un log separado (fuera del `lifecycle.jsonl`) para auditoría, pero no debe permitir la deserialización de un run cuyo registro tenga conflictos de secuencia sin resolver.
+
+#### 7.8.8 Qué ocurre si el registro no puede verificarse
+
+- Si el `lifecycle.jsonl` no existe, está vacío, o su integridad criptográfica no puede verificarse (por ejemplo, no se puede calcular el `event_sha256` canonical de los eventos, o la cadena está rota), el loader debe:
+  1. **No deserializar** ningún run que tenga estado `approved` o `validated` con fines de inferencia o evaluación.
+  2. Permitir la inspección de solo metadata (`audit` purpose) de runs `sealed` si los hashes de artefactos y el manifiesto son válidos.
+  3. Registrar el evento de fallo de verificación con código de error `E_CHAIN_UNAVAILABLE`.
+- Si el registro está disponible pero no firmado (carece de firmas Ed25519 en eventos `approved`), el loader debe limitarse a `audit` purpose y rechazar `inference` o `evaluation` que requiera confianza en la procedencia.
+
+---
+
+### 7.8.9 Ejemplo de evento canonicalizado (sealed, primer evento)
 
 ```json
-{"event_id":"evt_01JQ8Z4A1B2C3D4E5F6G7H8J9K","model_id":"mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W","event":"sealed","at":"2026-11-25T18:04:13.000000Z","manifest_sha256":"9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a","actor":"pipeline","evidence":null}
-{"event_id":"evt_01JQ8Z5B2C3D4E5F6G7H8J9K0M","model_id":"mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W","event":"validated","at":"2026-11-26T09:00:00.000000Z","manifest_sha256":"9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a","actor":"verifier","evidence":{"report_sha256":"abababababababababababababababababababababababababababababababab"}}
-{"event_id":"evt_01JQ8Z6C3D4E5F6G7H8J9K0M1N","model_id":"mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W","event":"approved","at":"2026-11-26T15:30:00.000000Z","manifest_sha256":"9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a","actor":"human:lutz405","evidence":{"approval_sha256":"cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"}}
+{"sequence_number":1,"previous_event_sha256":"0000000000000000000000000000000000000000000000000000000000000000","event_id":"evt_01JQ8Z4A1B2C3D4E5F6G7H8J9K","model_id":"mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W","event":"sealed","at":"2026-11-25T18:04:13.000000Z","manifest_sha256":"9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a","actor":"pipeline","evidence":null}
 ```
 
-| Transición | Quién | Evidencia mínima |
+La canonicalización para el hash sería:
+`1,000000000000000000000000000000000000000000000000000000000000000,evt_01JQ8Z4A1B2C3D4E5F6G7H8J9K,mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W,sealed,2026-11-25T18:04:13.000000Z,9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a,null`
+
+Y su `event_sha256` sería el SHA-256 de esa string.
+
+#### 7.8.10 Distinción de tipos de integridad
+
+| Tipo | Descripción | Soporte en loader |
 |---|---|---|
-| `sealed` | Pipeline | `manifest_sha256` |
-| `validated` | Verificador independiente | Informe de re-evaluación firmado |
-| `approved` | Humano | Aprobación firmada + política + alcance |
-| `deprecated` | Humano | Run sustituto |
-| `revoked` | Humano o incidente | Motivo y alcance |
+| **Append-only lógico** | El registro solo crece; no se editan líneas pasadas. | Sí, el loader rechaza escrituras in-place. |
+| **Integridad criptográfica** | Cadena de hashes `previous_event_sha256 → event_sha256` verificable. | Sí, el loader verifica antes de cualquier operación. |
+| **Autenticidad** | Firmas Ed25519 en eventos `approved` con clave fuera del repo. | Sí, requisito obligatorio para `approved` purpose. |
+| **Inmutabilidad respaldada por almacenamiento externo** | Anclaje en servicio externo (Git firmado, tiempo, WORM). | No indispensable, pero recomendado para seguridad alta. |
 
-Reglas:
-
-- El estado efectivo es el último evento válido para `(model_id, manifest_sha256)`.
-- Un evento con un `manifest_sha256` distinto del actual invalida la cadena.
-- Un evento desconocido o una transición no permitida se rechaza.
-- `approved` exige `manifest.sig` y `approvals/<model_id>.json` firmados.
-- El registro debe estar fuera del control del pipeline no confiable; si no, se firma cada evento o se replica en un log externo.
+**Regla transversal:** la ausencia de anclaje externo o cadena rota obliga al loader a modo *integrity-only* y deniega `approved`/`inference` sin firma verificada.
 
 ### 7.9 Política de conservación
 
@@ -914,17 +1129,41 @@ La deserialización ocurre una sola vez y sobre el mismo buffer que se hasheó. 
 
 ### 8.3 Política de estado por propósito
 
+La deserialización solo está permitida cuando la cadena de ciclo de vida y la autenticidad del manifiesto son verificables. La política por propósito es la siguiente:
+
 | Estado efectivo | `inference` | `evaluation` | `audit` (solo metadata) |
 |---|:---:|:---:|:---:|
-| `sealed` | No | No | Sí |
-| `validated` | No | Sí | Sí |
-| `approved` | **Sí** | Sí | Sí |
-| `deprecated` | No | No | Sí |
-| `revoked` | No | No | Solo forense |
-| `rejected` | No | No | No |
-| Ausente o desconocido | No | No | No |
+| `sealed` | **No recomendado** para inferencia producción. Solo para auditoría/evaluación controlada si no hay firma válida. | **No** para evaluación formal. Puede usarse con verificación de integridad manual. | **Sí** — solo metadata, sin deserializar el payload. |
+| `validated` | **No** para inferencia. Solo con autorización del verificador que emitió el informe firmado. | **Sí** — con informe de re-evaluación firmado y `manifest.sig` verificado. | **Sí** — metadata + verificación de integridad. |
+| `approved` | **Sí** — solo con firma Ed25519 válida en `manifest.sig`, evento `approved` firmado en el registro y estado vigente (sin caducidad). | **Sí** — con cadena de ciclo de vida verificada y firma válida. | **Sí** — metadata + firma verificada. |
+| `deprecated` | **No**. Requiere run sustituto `approved`. | **No**. Usar run sustituto. | **Sí** — metadata, sin deserializar. |
+| `revoked` | **No**. Prohibido su uso incluso si los hashes son correctos. | **No**. Prohibido. | **Solo forense** — con autorización administrativa. |
+| `rejected` | **No**. | **No**. | **No**. |
+| Ausente o desconocido | **No**. | **No**. | **No**. |
 
-`audit` nunca deserializa. Si se necesita inspección binaria, se hace con `pickletools` y sin ejecutar el payload.
+#### Límites y advertencias adicionales
+
+- **Firma no disponible:** Si no hay clave Ed25519 privada para verificar `manifest.sig` y los eventos `approved` en el registro, el sistema debe limitarse a modo *integrity-only*: los hashes de artefactos y el manifiesto pueden verificarse, pero **nunca** se permite la deserialización para `inference` o `evaluation` con fines de confianza. Solo `audit` purpose con inspección de metadatos está permitido.
+
+- **Registro manipulado o sin anclaje externo:** Si el `lifecycle.jsonl` no puede verificarse (cadena rota, eventos faltantes, sin firma Ed25519 en eventos `approved`, o sin anclaje externo confiable), el loader debe:
+  1. **No deserializar** ningún run con estado `approved` o `validated` para inferencia o evaluación.
+  2. Permitir inspección de solo metadata (`audit`) de runs `sealed` si los hashes de artefactos y el manifiesto son válidos.
+  3. Registrar el fallo con código de error `E_CHAIN_UNAVAILABLE` y continuar en modo *integrity-only*.
+
+- **Confusión de firma con seguridad del pickle:** Una firma Ed25519 válida autentica el origen del run, pero **no** garantiza que el contenido del pickle sea seguro. La firma forma parte de un plan de migración futura a un formato de inferencia más seguro (ONNX o equivalente). Mantener el aislamiento del proceso de carga (mínimos privilegios, sandbox, límites de memoria/tiempo) sigue siendo obligatorio independientemente de la firma.
+
+- **Corrida entre verificación y deserialización (TOCTOU):** El loader debe usar el buffer único verificado en los pasos 7-9 (hashes, estado, coherencia) y **nunca** volver a abrir la ruta del archivo para `joblib.load`. La deserialización debe ocurrir exclusivamente sobre los bytes ya leídos y cuya integridad fue comprobada.
+
+- **Carga de runs `sealed` sin firma:** Un run `sealed` (sin evento `approved` en el registro) puede cargarse con propósito `audit` para inspección de metadatos y verificación de hashes, pero **no** para inferencia ni evaluación formal. Si se necesita inferencia, el run debe promocionarse a `validated` o `approved` mediante los flujos correspondientes.
+
+#### Tabla de decisión rápida para el loader
+
+| Acción | Estado `sealed` | Estado `validated` | Estado `approved` | Sin cadena verificable |
+|---|---|---|---|---|
+| Deserializar para `inference` | **No** (solo audit) | **No** (solo con autorización del verificador) | **Sí** (con firma válida) | **No** |
+| Deserializar para `evaluation` | **No** (solo audit con integridad) | **Sí** (con informe firmado) | **Sí** (con firma válida) | **No** |
+| Cargar metadata (`audit`) | **Sí** (hashes OK) | **Sí** (hashes OK) | **Sí** (hashes + firma OK) | **No** (cadena rota) |
+| Firmar aprobación pendiente | N/A | N/A | Requiere clave Ed25519 + evento en registro | N/A |
 
 ### 8.4 Códigos de error
 
@@ -1419,4 +1658,3 @@ Ninguna de estas decisiones se resuelve en AUD-04B.1. Las que bloquean S1 son D0
 - El único archivo nuevo es `docs/aud04b_model_provenance_v3_design.md`.
 
 **AUD-04B.1 termina aquí.** No se inicia AUD-04B.2, no se implementa el contrato y no se elige ningún modelo. A la espera de autorización expresa.
-
