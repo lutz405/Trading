@@ -78,6 +78,32 @@ class BacktestEngine:
         mark = validate_number(mark_price, "mark_price", positive=True)
         return self.capital + self.collateral + self._long_market_value(mark) - self._short_liability(mark)
 
+    def _exit_gap(self, idx: int, open_price: float) -> bool:
+        """Close at the open when the market has already crossed a level.
+
+        A pending order fills at the bar open, but a stop or take computed from
+        the previous close may already be behind the open. Exiting at the level
+        in that case would fabricate a better price than the market offered.
+        """
+        pos = self.position
+        if pos is None:
+            return False
+        if pos["side"] == "long":
+            if open_price <= pos["stop"]:
+                self._exit(idx, open_price, "stop")
+                return True
+            if open_price >= pos["take"]:
+                self._exit(idx, open_price, "take")
+                return True
+        else:
+            if open_price >= pos["stop"]:
+                self._exit(idx, open_price, "stop")
+                return True
+            if open_price <= pos["take"]:
+                self._exit(idx, open_price, "take")
+                return True
+        return False
+
     def _enter(self, idx, price, side, qty, stop, take):
         if price <= 0 or qty <= 0:
             return
@@ -86,15 +112,14 @@ class BacktestEngine:
         entry_notional = entry * qty
         entry_fee = entry_notional * self.fee
         entry_slip = slippage_cost_amount(qty, price, self.slippage)
+        # Cash-collateralised shorts require the full notional plus the fee to
+        # be covered by free cash at entry, exactly like a long.
+        if entry_notional + entry_fee > self.capital:
+            logger.warning("insufficient capital for entry")
+            return
         if side == "long":
-            if entry_notional + entry_fee > self.capital:
-                logger.warning("insufficient capital for entry")
-                return
             self.capital -= entry_notional + entry_fee
         else:
-            if entry_fee > self.capital:
-                logger.warning("insufficient capital for entry fee")
-                return
             self.capital -= entry_fee
             self.collateral += entry_notional
         self.fees_paid += entry_fee
@@ -161,33 +186,42 @@ class BacktestEngine:
         for i in range(n):
             row = df.iloc[i]
             open_price = float(row["open"])
-            if math.isnan(open_price):
-                logger.warning("missing open at %d; skip pending fill", i)
+            valid_open = math.isfinite(open_price) and open_price > 0
+            if not valid_open:
+                logger.warning("invalid open at %d; skip pending fill", i)
             elif self.pending is not None and self.position is None:
                 side, qty, stop, take = self.pending
                 self._enter(i, open_price, side, qty, stop, take)
                 self.pending = None
 
             if self.position is not None:
-                pos = self.position
-                high = float(row["high"])
-                low = float(row["low"])
-                if math.isnan(high) or math.isnan(low) or high < low:
-                    logger.warning("invalid OHLC at %d; skip stop check", i)
-                else:
-                    stop_hit = False
-                    take_hit = False
-                    if pos["side"] == "long":
-                        stop_hit = low <= pos["stop"]
-                        take_hit = high >= pos["take"]
+                gap_exit = valid_open and self._exit_gap(i, open_price)
+                if not gap_exit:
+                    pos = self.position
+                    high = float(row["high"])
+                    low = float(row["low"])
+                    if (
+                        not math.isfinite(high)
+                        or not math.isfinite(low)
+                        or high <= 0
+                        or low <= 0
+                        or high < low
+                    ):
+                        logger.warning("invalid OHLC at %d; skip stop check", i)
                     else:
-                        stop_hit = high >= pos["stop"]
-                        take_hit = low <= pos["take"]
-                    # conservative: if both hit same candle, stop first
-                    if stop_hit:
-                        self._exit(i, pos["stop"], "stop")
-                    elif take_hit:
-                        self._exit(i, pos["take"], "take")
+                        stop_hit = False
+                        take_hit = False
+                        if pos["side"] == "long":
+                            stop_hit = low <= pos["stop"]
+                            take_hit = high >= pos["take"]
+                        else:
+                            stop_hit = high >= pos["stop"]
+                            take_hit = low <= pos["take"]
+                        # conservative: if both hit same candle, stop first
+                        if stop_hit:
+                            self._exit(i, pos["stop"], "stop")
+                        elif take_hit:
+                            self._exit(i, pos["take"], "take")
 
             price = float(row["close"])
             if not math.isfinite(price) or price <= 0:

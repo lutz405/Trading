@@ -259,9 +259,9 @@ class PaperBroker:
         validate_number(new_capital, "new_capital")
         validate_number(new_fees_paid, "new_fees_paid", nonnegative=True)
         validate_number(new_slippage_cost, "new_slippage_cost", nonnegative=True)
-        if side == "long" and notional + fee > self.capital:
-            return False
-        if side == "short" and fee > self.capital:
+        # Both long entries and cash-collateralised shorts must cover the full
+        # notional plus the fee with free cash.
+        if notional + fee > self.capital:
             return False
         self.capital = new_capital
         self.positions.append(Position(side, entry, qty, stop, take, entry_fee=fee, entry_slippage=slip))

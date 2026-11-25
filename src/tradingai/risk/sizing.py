@@ -99,12 +99,18 @@ def calculate_cash_long(cash: float, entry_exec: float, fee_rate: float) -> floa
 
 
 def calculate_cash_short(cash: float, entry_exec: float, fee_rate: float) -> float:
+    """Maximum short quantity backed by cash collateral plus the entry fee.
+
+    The documented contract is ``free_cash >= q * P + fee``. With
+    ``fee = q * entry_exec * fee_rate`` this is ``q <= cash / (P * (1 + fee))``.
+    A short is never funded by the fee alone.
+    """
     cash = validate_number(cash, "cash")
     entry_exec = validate_number(entry_exec, "entry_exec", positive=True)
     fee_rate = validate_number(fee_rate, "fee_rate", nonnegative=True)
-    if fee_rate <= 0:
-        return math.inf
-    return cash / (fee_rate * entry_exec)
+    if cash <= 0:
+        return 0.0
+    return cash / (entry_exec * (1.0 + fee_rate))
 
 
 def floor_to_step(qty: float, step: float) -> float:
