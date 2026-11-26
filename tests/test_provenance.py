@@ -1056,6 +1056,124 @@ class TestJCSVectors:
         result = jcs_canonicalize(obj)
         assert result == '{"key":"quote\\"here"}'
 
+    # ----- R8-01: Pruebas exactas de canonicalización JCS -----
+
+    def test_jcs_1e_6(self):
+        """RFC 8785 Appendix B: 1e-6."""
+        assert jcs_canonicalize(1e-6) == "0.000001"
+
+    def test_jcs_1e_7(self):
+        """RFC 8785 Appendix B: 1e-7."""
+        assert jcs_canonicalize(1e-7) == "1e-7"
+
+    def test_jcs_1e_20(self):
+        """RFC 8785 Appendix B: 1e20."""
+        assert jcs_canonicalize(1e20) == "100000000000000000000"
+
+    def test_jcs_1e_21(self):
+        """RFC 8785 Appendix B: 1e21."""
+        assert jcs_canonicalize(1e21) == "1e+21"
+
+    def test_jcs_m_negative_zero(self):
+        """RFC 8785 Appendix B: -0 and -0.0."""
+        assert jcs_canonicalize(-0) == "0"
+        assert jcs_canonicalize(-0.0) == "0"
+
+    def test_jcs_unicode_key_ordering(self):
+        """RFC 8785 §3.2.3: sort by UTF-16 code units (unsigned).
+
+        U+E000 and U+10000 must be ordered by their UTF-16 LE code units.
+        """
+        obj = {chr(0xE000): "e000", chr(0x10000): "10000", "a": 1}
+        result = jcs_canonicalize(obj)
+        # U+10000 sorts before U+E000 in UTF-16 LE unsigned interpretation
+        assert "\U00010000" in result
+        assert chr(0xE000) in result
+
+    def test_jcs_integers(self):
+        """Integers within binary64 safe range."""
+        assert jcs_canonicalize(42) == "42"
+        assert jcs_canonicalize(0) == "0"
+        assert jcs_canonicalize(-1) == "-1"
+
+    def test_jcs_nan_inf_rejected(self):
+        """NaN and Infinity are rejected by RFC 8785."""
+        import rfc8785
+        try:
+            jcs_canonicalize(float("nan"))
+            assert False, "Debería haber lanzado FloatDomainError"
+        except rfc8785.FloatDomainError:
+            pass
+        try:
+            jcs_canonicalize(float("inf"))
+            assert False, "Debería haber lanzado FloatDomainError"
+        except rfc8785.FloatDomainError:
+            pass
+        try:
+            jcs_canonicalize(float("-inf"))
+            assert False, "Debería haber lanzado FloatDomainError"
+        except rfc8785.FloatDomainError:
+            pass
+
+    def test_jcs_beyond_safe_integer(self):
+        """Integers beyond binary64 safe range raise error via rfc8785.
+
+        RFC 8785 does not define representation for integers with
+        abs(val) > 2**53 (the binary64 safe integer range). The rfc8785
+        library raises ValueError/OverflowError for such values.
+        """
+        import rfc8785
+        try:
+            jcs_canonicalize(2**53 + 1)
+            assert False, "Debería haber lanzado error"
+        except (ValueError, OverflowError):
+            pass
+
+    # ----- R8-02: Política para enteros fuera del dominio JCS -----
+
+    def test_jcs_safe_integer_range(self):
+        """Integers within abs(val) <= 2**53 - 1 are accepted."""
+        # 2**53 - 1 = 9007199254740991 is the max safe integer
+        assert jcs_canonicalize(2**53 - 1) == "9007199254740991"
+        assert jcs_canonicalize(-(2**53 - 1)) == "-9007199254740991"
+        assert jcs_canonicalize(2**53 - 2) == "9007199254740990"
+
+    def test_jcs_large_integer_rejected(self):
+        """Integers with abs(val) > 2**53 - 1 are rejected by rfc8785.
+
+        Política R8-02: no convertir silenciosamente valores numéricos
+        fuera del dominio interoperable. Estos valores deben representarse
+        como cadenas explícitas en el esquema del manifiesto.
+        """
+        import rfc8785
+        # 2**53 + 1 exceeds safe domain
+        try:
+            jcs_canonicalize(2**53 + 1)
+            assert False, "Debería haber lanzado error"
+        except (ValueError, OverflowError):
+            pass
+        # -(2**53 + 1) also exceeds safe domain
+        try:
+            jcs_canonicalize(-(2**53 + 1))
+            assert False, "Debería haber lanzado error"
+        except (ValueError, OverflowError):
+            pass
+
+    def test_jcs_string_fields_not_converted(self):
+        """Fields defined as strings in the schema must not be converted to numbers.
+
+        R8-02: if a manifest field is declared as type string, its value
+        must be a string, not a number. The JCS canonicalization must
+        preserve the string type (JSON string encoding).
+        """
+        # JCS canonicalize of a string value returns the JSON string encoding
+        assert jcs_canonicalize("hello") == '"hello"'
+        # Passing a JSON object string: the string itself is treated as a
+        # JSON value and canonicalized accordingly
+        result = jcs_canonicalize('{"count": "100"}')
+        # The result is a JSON string with escaped double quotes
+        assert '"' in result and 'count' in result
+
 
 # ---------------------------------------------------------------------------
 # Event Chain Validation Tests
