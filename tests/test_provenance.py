@@ -99,7 +99,7 @@ class TestJCSCanonicalization:
     def test_jcs_rfc8785_example(self):
         obj = {
             "numbers": [333333333.3333333, 1e30, 4.50, 2e-3, 0.000000000000000000000000001],
-            "string": "\u20ac$\u000A\u000d\u0000 (backslash: \\)",
+            "string": "\u20ac$\u000a\u000d\u0000 (backslash: \\)",
             "literals": [None, True, False],
         }
         result = jcs_canonicalize(obj)
@@ -372,19 +372,43 @@ class TestManifestValidation:
             "calibration": {
                 "mode": "in_pipeline",
                 "base_model_id": "mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W",
-                "base_artifact_sha256": {"rf": "9" * 64, "xgb": "a" * 64},
+                "base_artifact_sha256": {"rf": "d" * 64, "xgb": "e" * 64},
                 "method": "sigmoid",
                 "fit_partition": "validation",
                 "calibration_input_sha256": "b" * 64,
                 "classes": [0, 1, 2],
                 "class_order": [0, 1, 2],
                 "n_calibrators": 3,
-                "artifact_sha256": "c" * 64,
+                "artifact_sha256": "f" * 64,
             },
             "artifacts": [
-                {"role": "rf", "path": "rf.joblib", "sha256": "d" * 64, "bytes": 1000, "media_type": "application/octet-stream", "format": "joblib-pickle", "serializer": "1.6.0"},
-                {"role": "xgb", "path": "xgb.joblib", "sha256": "e" * 64, "bytes": 1000, "media_type": "application/octet-stream", "format": "joblib-pickle", "serializer": "3.4.1"},
-                {"role": "calibrator", "path": "calibrator.joblib", "sha256": "f" * 64, "bytes": 1000, "media_type": "application/octet-stream", "format": "joblib-pickle", "serializer": "1.6.0"},
+                {
+                    "role": "rf",
+                    "path": "rf.joblib",
+                    "sha256": "d" * 64,
+                    "bytes": 1000,
+                    "media_type": "application/octet-stream",
+                    "format": "joblib-pickle",
+                    "serializer": "1.6.0",
+                },
+                {
+                    "role": "xgb",
+                    "path": "xgb.joblib",
+                    "sha256": "e" * 64,
+                    "bytes": 1000,
+                    "media_type": "application/octet-stream",
+                    "format": "joblib-pickle",
+                    "serializer": "3.4.1",
+                },
+                {
+                    "role": "calibrator",
+                    "path": "calibrator.joblib",
+                    "sha256": "f" * 64,
+                    "bytes": 1000,
+                    "media_type": "application/octet-stream",
+                    "format": "joblib-pickle",
+                    "serializer": "1.6.0",
+                },
             ],
             "metrics": {
                 "path": "metrics.json",
