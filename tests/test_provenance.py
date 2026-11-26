@@ -1083,12 +1083,20 @@ class TestJCSVectors:
         """RFC 8785 §3.2.3: sort by UTF-16 code units (unsigned).
 
         U+E000 and U+10000 must be ordered by their UTF-16 LE code units.
+        The canonical output must have keys sorted by UTF-16 code unit
+        interpretation (unsigned), without reordering by the test.
         """
-        obj = {chr(0xE000): "e000", chr(0x10000): "10000", "a": 1}
+        # Only the two unicode keys; "a" would sort first (0x61 < 0x10000)
+        obj = {chr(0xE000): "e000", chr(0x10000): "10000"}
         result = jcs_canonicalize(obj)
-        # U+10000 sorts before U+E000 in UTF-16 LE unsigned interpretation
-        assert "\U00010000" in result
-        assert chr(0xE000) in result
+        # Parse result to extract key order
+        import json
+        parsed = json.loads(result)
+        keys = list(parsed.keys())
+        # U+10000 (0x10000) sorts before U+E000 (0xE000) in UTF-16 LE unsigned
+        assert len(keys) == 2, f"Expected 2 keys, got {len(keys)}: {keys}"
+        assert keys[0] == chr(0x10000), f"Expected first key to be U+10000, got {repr(keys[0])}"
+        assert keys[1] == chr(0xE000), f"Expected second key to be U+E000, got {repr(keys[1])}"
 
     def test_jcs_integers(self):
         """Integers within binary64 safe range."""
@@ -1162,9 +1170,12 @@ class TestJCSVectors:
     def test_jcs_string_fields_not_converted(self):
         """Fields defined as strings in the schema must not be converted to numbers.
 
-        R8-02: if a manifest field is declared as type string, its value
+        R9-02: if a manifest field is declared as type string, its value
         must be a string, not a number. The JCS canonicalization must
-        preserve the string type (JSON string encoding).
+        preserve the string type (JSON string encoding). No automatic
+        coercion between types is performed.
+
+        Also per R8-02: integers outside the binary64 safe domain are rejected.
         """
         # JCS canonicalize of a string value returns the JSON string encoding
         assert jcs_canonicalize("hello") == '"hello"'
@@ -1173,6 +1184,21 @@ class TestJCSVectors:
         result = jcs_canonicalize('{"count": "100"}')
         # The result is a JSON string with escaped double quotes
         assert '"' in result and 'count' in result
+        # Verify that a number stored as a string field is preserved as string
+        obj = {"count": "100"}
+        result = jcs_canonicalize(obj)
+        # The value "100" should remain as a string, not be converted to number 100
+        assert '"100"' in result, "String-typed field value must remain as string"
+        # Verify integer safe range is preserved
+        result = jcs_canonicalize(42)
+        assert result == "42", "Integer within safe domain should be canonicalized"
+        # Integer outside safe domain should be rejected
+        import rfc8785
+        try:
+            jcs_canonicalize(2**53 + 1)
+            assert False, "Should have raised ValueError/OverflowError"
+        except (ValueError, OverflowError):
+            pass  # Expected per R8-02
 
 
 # ---------------------------------------------------------------------------

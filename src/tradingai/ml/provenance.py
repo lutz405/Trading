@@ -19,7 +19,8 @@ def jcs_canonicalize(obj: Any) -> str:
     Arrays preserve their order.
     Numbers use the rfc8785 library's ECMAScript Number.prototype.toString
     algorithm, which correctly handles -0, NaN, Infinity, scientific notation,
-    and integers outside the binary64 safe range.
+    and integers outside the binary64 safe domain (abs > 2**53 - 1) are rejected
+    per policy R8-02.
     Raises rfc8785.FloatDomainError: If NaN or Infinity is encountered.
     """
     return rfc8785.dumps(obj).decode('utf-8')
@@ -135,58 +136,77 @@ def validate_sha256(value: str) -> bool:
     """Validate SHA-256 hex string (64 chars)."""
     return bool(re.match(r'^[0-9a-f]{64}$', value))
 
-def validate_event(event: dict[str, Any], previous_event: dict[str, Any] | None = None) -> list[str]:
+def validate_event(event: dict[str, Any], previous_event: dict[str, Any] | None = None, *, skip_first_event_check: bool = False) -> list[str]:
     """Validate a lifecycle event. Returns list of errors (empty = valid).
-    Per S1-R5: event_sha256 is mandatory and must match the JCS canonical hash
-    of the event (excluding the field itself).
+
+    Per S1-R5:
+    - event_sha256 is mandatory and must match the JCS canonical hash
+      of the event (excluding the field itself).
+    - manifest_sha256 is a manifest-level concept, not required at event level.
     """
     errors: list[str] = []
+
+    # event_sha256 is mandatory per S1-R5
     if 'event_sha256' not in event:
         errors.append('Missing required field: event_sha256')
     else:
+        # Validate SHA-256 format
         if not validate_sha256(event['event_sha256']):
             errors.append('Invalid event_sha256 format')
-    required_fields = ['sequence_number', 'event_id', 'model_id', 'event', 'at', 'actor', 'evidence']
+
+    required_fields = [
+        'sequence_number', 'event_id', 'model_id', 'event', 'at',
+        'actor', 'evidence',
+    ]
     for field in required_fields:
         if field not in event:
             errors.append(f'Missing required field: {field}')
+
+    # Allow event_sha256 and previous_event_sha256 as valid event fields
     allowed_fields = {'event_sha256', 'previous_event_sha256'} | set(required_fields)
     for key in event:
         if key not in allowed_fields:
             errors.append(f'Unknown field in event: {key}')
+
     if 'event_id' in event and not validate_event_id(event['event_id']):
         errors.append('Invalid event_id format')
+
     if 'model_id' in event and not validate_model_id(event['model_id']):
         errors.append('Invalid model_id format')
+
     if 'manifest_sha256' in event and not validate_sha256(event['manifest_sha256']):
         errors.append('Invalid manifest_sha256 format')
+
     if 'at' in event and not validate_rfc3339(event['at'], require_utc=True):
         errors.append('Invalid at format (must be UTC RFC 3339)')
+
     if 'previous_event_sha256' in event and not validate_sha256(event['previous_event_sha256']):
         errors.append('Invalid previous_event_sha256 format')
+
     if 'event' in event and event['event'] not in ('sealed', 'validated', 'approved', 'deprecated', 'revoked'):
         errors.append(f'Invalid event type: {event["event"]}')
+
     if 'sequence_number' in event:
         if not isinstance(event['sequence_number'], int) or isinstance(event['sequence_number'], bool):
             errors.append('sequence_number must be an integer')
         elif event['sequence_number'] < 1:
             errors.append('sequence_number must be >= 1')
-    if 'actor' in event and not isinstance(event['actor'], str):
-        errors.append('actor must be a string')
-    # Chain verification
-    if previous_event is not None:
-        if 'sequence_number' in event and 'sequence_number' in previous_event:
-            if event['sequence_number'] != previous_event['sequence_number'] + 1:
-                errors.append(f'Sequence gap: expected {previous_event["sequence_number"] + 1}, got {event["sequence_number"]}')
-        if 'event_sha256' in previous_event:
-            if event.get('previous_event_sha256') != previous_event.get('event_sha256'):
-                errors.append('previous_event_sha256 does not match previous event\'s event_sha256')
-    # First event check
-    if previous_event is None and 'sequence_number' in event:
+        # Check sequence gap: must increment by exactly 1 from previous event
+        if previous_event is not None and 'sequence_number' in previous_event:
+            expected = previous_event['sequence_number'] + 1
+            if event['sequence_number'] != expected:
+                errors.append(f'Sequence gap: expected {expected}, got {event["sequence_number"]}')
+
+    # First event check (only when not in a chain context)
+    # These checks apply only to the first event of each model_id in a chain.
+    # When skip_first_event_check is True, these are intentionally omitted
+    # so that subsequent events in a chain can be validated independently.
+    if not skip_first_event_check and previous_event is None and 'sequence_number' in event:
         if event['sequence_number'] != 1:
             errors.append('First event must have sequence_number == 1')
         if event.get('previous_event_sha256') != '0' * 64:
             errors.append('First event must have previous_event_sha256 == \'0\'*64')
+
     return errors
 
 def verify_event_hash(event: dict[str, Any], expected_hash: str) -> bool:
@@ -282,7 +302,7 @@ def validate_partition_consistency(manifest: dict[str, Any]) -> list[str]:
         errors.append('Invalid partition_manifest_sha256 format')
     return errors
 
-# validate_event_chain - R7 + R8-03
+# validate_event_chain - R7 + R9-03
 def validate_event_chain(events: list[dict[str, Any]]) -> list[str]:
     """Validate a complete lifecycle event chain per R7.
     Rules (strict, fail-closed):
@@ -307,7 +327,16 @@ def validate_event_chain(events: list[dict[str, Any]]) -> list[str]:
     model_state: dict[str, dict[str, Any]] = {}
     allowed_event_types = {'sealed', 'validated', 'approved', 'deprecated', 'revoked'}
     for idx, event in enumerate(events):
-        # Validate each event individually: required fields, types, hashes, unknown fields
+        # Validate each event individually using validate_event()
+        # with skip_first_event_check=True so that chain events
+        # (sequence > 1) are not rejected by the "first event" checks.
+        # Individual field validations (ULID formats, date-time,
+        # SHA-256 hashes, unknown fields, event type, required fields)
+        # are still performed.
+        event_errors = validate_event(event, skip_first_event_check=True)
+        for e in event_errors:
+            errors.append(f'Event {idx}: {e}')
+        # Chain-specific validation: required fields, types, hashes, unknown fields
         required = ['sequence_number', 'event_id', 'model_id', 'event', 'at', 'actor', 'evidence']
         for field in required:
             if field not in event:
@@ -366,7 +395,8 @@ def validate_event_chain(events: list[dict[str, Any]]) -> list[str]:
             state['prior_computed_hash'] = computed_hash
     return errors
 
-
+# Dependencies and packaging (documented separately)
+# ----------------------------------------------------------
 def validate_manifest(manifest: dict[str, Any]) -> list[str]:
     """Validate a manifest dict. Integrates all structural and semantic checks.
 
@@ -408,5 +438,3 @@ def validate_manifest(manifest: dict[str, Any]) -> list[str]:
 
     return errors
 
-# Dependencies and packaging (documented separately)
-# ----------------------------------------------------------

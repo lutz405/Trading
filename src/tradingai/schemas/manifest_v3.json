@@ -916,6 +916,11 @@
             "additionalProperties": false
           }
         }
+      },
+      "xgb": {
+        "params": {
+          "additionalProperties": false
+        }
       }
     }
   }

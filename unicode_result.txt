@@ -1,0 +1,6 @@
+Result: {"𐀀":"b","":"a"}
+chr(0xE000): '\ue000'
+chr(0x10000): '𐀀'
+Keys order in result:
+  '𐀀': 'b'
+  '\ue000': 'a'
