@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import math
 import os
 import re
 from datetime import datetime
@@ -18,127 +17,10 @@ from typing import Any
 
 # ---------------------------------------------------------------------------
 # JCS Canonicalization (RFC 8785)
+# Use the official rfc8785 library instead of custom repr()-based implementation.
+# https://pypi.org/project/rfc8785/
 # ---------------------------------------------------------------------------
-
-
-def _utf16_sort_key(s: str) -> list[int]:
-    """RFC 8785 §3.2.3: sort by UTF-16 code units (unsigned).
-
-    Converts the string to UTF-16 LE bytes and interprets each pair as a
-    16-bit unsigned code unit (little-endian).
-    """
-    encoded = s.encode("utf-16-le")
-    units = []
-    for i in range(0, len(encoded), 2):
-        unit = encoded[i] | (encoded[i + 1] << 8)
-        units.append(unit)
-    return units
-
-
-def _jcs_number(value: float | bool) -> str:
-    """RFC 8785 §3.2.2.3: serialize number per ECMAScript Number.prototype.toString.
-
-    Implements the ECMAScript number-to-string algorithm for binary64 (IEEE 754)
-    as specified by RFC 8785. This replaces any use of repr() which does not
-    conform to the ECMAScript specification.
-
-    Rules implemented:
-    - Integers are serialized as decimal strings without exponent.
-    - -0.0 is serialized as "-0".
-    - NaN and Infinity raise ValueError.
-    - Finite floats use the shortest representation that round-trips via
-      ECMAScript ToString.
-    - Numbers with magnitude in [1e-7, 1e21) use decimal notation without
-      unnecessary trailing .0 (ECMAScript: 1.0 -> "1").
-    - Numbers outside that range use scientific notation.
-    """
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    if isinstance(value, int):
-        # JCS uses binary64; integers beyond 2^53 cannot be precisely represented
-        # but are still allowed as decimal strings.
-        return str(value)
-    if isinstance(value, float):
-        if math.isnan(value) or math.isinf(value):
-            raise ValueError("NaN and Infinity are not allowed in JCS")
-        # Handle -0.0
-        if value == 0.0:
-            if math.copysign(1.0, value) < 0:
-                return "-0"
-            return "0"
-        # ECMAScript Number.prototype.toString (radix 10)
-        # Use the specification algorithm:
-        # 1. If |x| == 0 return "+0" or "-0" depending on sign
-        # 2. If |x| >= 1e21 or (0 < |x| < 1e-7) use scientific notation
-        # 3. Otherwise use decimal notation, removing unnecessary .0
-        abs_val = abs(value)
-
-        if abs_val >= 1e21 or (abs_val < 1e-7 and abs_val > 0):
-            # Scientific notation
-            # Python's repr gives a correct round-trip, but we need ECMAScript format.
-            # ECMAScript uses format like 1e+21, 1e-7, etc.
-            # We can use formatting that matches ECMAScript's ToString.
-            # Python's format with 'e' gives similar results but may differ in
-            # exponent sign handling. We'll construct the ECMAScript representation
-            # manually using the algorithm.
-            # Fall back to a careful repr-based approach that we normalize.
-            r = repr(value)
-            # Normalize Python's 'e'/'E' to ECMAScript lowercase 'e'
-            # Python: 1e-06, 1e+20; ECMAScript: 1e-6, 1e+21 (simplified)
-            # We need to strip leading zeros in exponent
-            if "e" in r.lower():
-                # Split mantissa and exponent
-                mantissa, exp_part = r.lower().split("e")
-                # Handle sign of exponent
-                if exp_part.startswith("+"):
-                    exp_sign = "+"
-                    exp_digits = exp_part[1:]
-                else:
-                    exp_sign = exp_part[0] if exp_part[0] in "+-" else "+"
-                    exp_digits = exp_part[1:] if exp_sign == "+" or exp_sign == "-" else exp_part
-                # Remove leading zeros from digits
-                exp_digits = exp_digits.lstrip("0") or "0"
-                # Reconstruct; ensure at least one digit
-                exp_digits = exp_digits or "0"
-                # If exponent was all zeros, keep "0"
-                if not exp_digits:
-                    exp_digits = "0"
-                r = f"{mantissa}e{exp_sign}{exp_digits}"
-            else:
-                # repr already in correct format for this case
-                # but ensure lowercase 'e'
-                r = r.lower()
-                # Move the 'e' past the sign if present
-                # Python may produce 'e-05', we want 'e-5'
-                if r.endswith(("e+0", "e-0")):
-                    # remove the extra zero
-                    r = r[:-3] + r[-2:]
-            return r
-        else:
-            # Decimal notation
-            # Format the number with enough precision, then clean up
-            # ECMAScript 1.0.toString() === "1"
-            # ECMAScript 1.5.toString() === "1.5"
-            # ECMAScript 100.00.toString() === "100"
-            # We need to match this behavior.
-
-            # Use Python's repr and then remove trailing .0 for whole-number floats
-            r = repr(value)
-            # ECMAScript removes .0 from values that are whole numbers:
-            # (1.0).toString() === "1" in ECMAScript
-            # But (1.5).toString() === "1.5"
-            # (100.0).toString() === "100"
-            if r.endswith(".0"):
-                # Check if the value is actually an integer
-                if value == int(value):
-                    r = r[:-2]
-                # else keep .0 for non-integer floats like 1.5 -> repr gives "1.5" already
-            # Additionally, for values like 10.0, repr gives "10.0", we want "10"
-            # But for 0.1, repr gives "0.1", we keep it
-            # The key cases from the requirements:
-            # -0, 1e-6, 1e-7, 1e20, 1e21
-            return r
-    raise TypeError(f"Unsupported type for JCS number: {type(value)}")
+import rfc8785
 
 
 def jcs_canonicalize(obj: Any) -> str:
@@ -148,70 +30,22 @@ def jcs_canonicalize(obj: Any) -> str:
 
     Properties are sorted by UTF-16 code units (unsigned).
     Arrays preserve their order.
-    Numbers use ECMAScript Number.prototype.toString.
+    Numbers use the rfc8785 library's ECMAScript Number.prototype.toString
+    algorithm, which correctly handles -0, NaN, Infinity, scientific notation,
+    and integers outside the binary64 safe range.
+
+    Raises:
+        rfc8785.FloatDomainError: If NaN or Infinity is encountered.
     """
-    if obj is None:
-        return "null"
-    if isinstance(obj, bool):
-        return "true" if obj else "false"
-    if isinstance(obj, int):
-        if abs(obj) > 2**53:
-            # Still serialize; precision warning but allowed
-            pass
-        return str(obj)
-    if isinstance(obj, float):
-        if math.isnan(obj) or math.isinf(obj):
-            raise ValueError("NaN and Infinity are not allowed in JCS")
-        if obj == 0.0:
-            if math.copysign(1.0, obj) < 0:
-                return "-0"
-            return "0"
-        abs_val = abs(obj)
-        if abs_val >= 1e21 or (abs_val < 1e-6 and abs_val > 0):
-            r = repr(obj)
-            # Normalize: ensure lowercase 'e' and strip leading zeros in exponent
-            if "e" in r.lower():
-                mantissa, exp_part = r.lower().split("e")
-                if exp_part.startswith("+"):
-                    exp_sign = "+"
-                    exp_digits = exp_part[1:]
-                else:
-                    exp_sign = exp_part[0] if exp_part[0] in "+-" else "+"
-                    exp_digits = exp_part[1:] if exp_sign in "+-" else exp_part
-                exp_digits = exp_digits.lstrip("0") or "0"
-                if not exp_digits:
-                    exp_digits = "0"
-                r = f"{mantissa}e{exp_sign}{exp_digits}"
-            else:
-                r = r.lower()
-            return r
-        else:
-            r = repr(obj)
-            if r.endswith(".0") and obj == int(obj) and abs(obj) < 2**53:
-                r = r[:-2]
-            return r
-    if isinstance(obj, str):
-        return json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
-    if isinstance(obj, list):
-        return "[" + ",".join(jcs_canonicalize(item) for item in obj) + "]"
-    if isinstance(obj, dict):
-        sorted_keys = sorted(obj.keys(), key=_utf16_sort_key)
-        pairs = []
-        for key in sorted_keys:
-            if not isinstance(key, str):
-                raise TypeError("JSON object keys must be strings")
-            pairs.append(
-                json.dumps(key, ensure_ascii=False, separators=(",", ":"))
-                + ":"
-                + jcs_canonicalize(obj[key])
-            )
-        return "{" + ",".join(pairs) + "}"
-    raise TypeError(f"Unsupported type for JCS: {type(obj)}")
+    return rfc8785.dumps(obj).decode("utf-8")
 
 
 def jcs_canonical_bytes(obj: Any) -> bytes:
-    """Return canonical bytes (UTF-8, no BOM, no trailing newline)."""
-    return jcs_canonicalize(obj).encode("utf-8")
+    """Return canonical bytes (UTF-8, no BOM, no trailing newline).
+
+    Equivalent to jcs_canonicalize(obj).encode("utf-8").
+    """
+    return rfc8785.dumps(obj)
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -220,8 +54,13 @@ def sha256_bytes(data: bytes) -> str:
 
 
 def sha256_canonical(obj: Any) -> str:
-    """SHA-256 of JCS canonical bytes (no trailing newline)."""
-    return sha256_bytes(jcs_canonical_bytes(obj))
+    """SHA-256 of JCS canonical bytes (no trailing newline).
+
+    Computes the JCS canonical form of *obj* (excluding any trailing newline
+    or BOM) and returns the SHA-256 hex digest of the resulting bytes.
+    """
+    canonical = jcs_canonical_bytes(obj)
+    return hashlib.sha256(canonical).hexdigest()
 
 
 # ---------------------------------------------------------------------------
@@ -416,16 +255,15 @@ def validate_manifest(manifest: dict[str, Any]) -> list[str]:
 
 
 def validate_event(event: dict[str, Any], previous_event: dict[str, Any] | None = None) -> list[str]:
-    """Validate a lifecycle event. Returns list of errors (empty = valid)."""
+    """Validate a lifecycle event. Returns list of errors (empty = valid).
 
+    Per S1-R5:
+    - event_sha256 is mandatory and must match the JCS canonical hash
+      of the event (excluding the field itself).
+    - manifest_sha256 is a manifest-level concept, not required at event level.
+    """
     errors: list[str] = []
 
-    # Per S1-R5: event_sha256 is mandatory; manifest_sha256 is a manifest-level
-    # concept and is not required at the individual event level.
-    required_fields = [
-        "sequence_number", "event_id", "model_id", "event", "at",
-        "actor", "evidence",
-    ]
     # event_sha256 is mandatory per S1-R5
     if "event_sha256" not in event:
         errors.append("Missing required field: event_sha256")
@@ -434,6 +272,10 @@ def validate_event(event: dict[str, Any], previous_event: dict[str, Any] | None 
         if not validate_sha256(event["event_sha256"]):
             errors.append("Invalid event_sha256 format")
 
+    required_fields = [
+        "sequence_number", "event_id", "model_id", "event", "at",
+        "actor", "evidence",
+    ]
     for field in required_fields:
         if field not in event:
             errors.append(f"Missing required field: {field}")

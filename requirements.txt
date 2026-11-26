@@ -11,6 +11,7 @@ xgboost>=2.0
 streamlit>=1.35
 plotly>=5.20
 joblib>=1.3
+rfc8785>=0.1.4
 
 # Development and quality checks
 pytest>=8
