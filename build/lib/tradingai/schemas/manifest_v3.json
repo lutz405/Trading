@@ -1,0 +1,209 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tradingai.local/schemas/manifest-v3.json",
+  "title": "Model Provenance Manifest v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "model_id", "created_at", "sealed_at", "status_at_seal",
+    "run_fingerprint", "git", "producer", "data", "target", "features",
+    "training", "validation", "calibration", "artifacts", "metrics", "extensions"
+  ],
+  "properties": {
+    "schema_version": {"type": "string", "const": "3.0.0"},
+    "model_id": {"type": "string", "pattern": "^mdl_[0-9A-HJKMNP-TV-Z]{26}$"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "sealed_at": {"type": "string", "format": "date-time"},
+    "status_at_seal": {"type": "string", "const": "sealed"},
+    "run_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "extensions": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-zA-Z][a-zA-Z0-9._-]*\\.[a-zA-Z][a-zA-Z0-9._-]*$": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    "git": {
+      "type": "object", "additionalProperties": false,
+      "required": ["commit", "dirty", "branch", "tag", "source_bundle_sha256"],
+      "properties": {
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "dirty": {"type": "boolean", "const": false},
+        "branch": {"type": ["string", "null"]},
+        "tag": {"type": ["string", "null"]},
+        "source_bundle_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "producer": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "version", "python", "command", "config_sha256"],
+      "properties": {
+        "name": {"type": "string"}, "version": {"type": "string"},
+        "python": {"type": "string"}, "command": {"type": "string"},
+        "config_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "data": {
+      "type": "object", "additionalProperties": false,
+      "required": ["symbol", "timeframe", "provider", "provider_version", "dataset_sha256", "snapshot_uri", "raw_rows", "feature_rows", "labeled_rows", "time_range", "missing_data_policy", "gap_policy", "ohlcv_schema_version", "alignment"],
+      "properties": {
+        "symbol": {"type": "string", "pattern": "^[A-Z]+/[A-Z]+$"},
+        "timeframe": {"type": "string", "enum": ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]},
+        "provider": {"type": "string"}, "provider_version": {"type": "string"},
+        "dataset_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "snapshot_uri": {"type": "string"},
+        "raw_rows": {"type": "integer", "minimum": 0},
+        "feature_rows": {"type": "integer", "minimum": 0},
+        "labeled_rows": {"type": "integer", "minimum": 0},
+        "time_range": {
+          "type": "object", "additionalProperties": false,
+          "required": ["start", "end", "timezone"],
+          "properties": {
+            "start": {"type": "string", "format": "date-time"},
+            "end": {"type": "string", "format": "date-time"},
+            "timezone": {"type": "string", "const": "UTC"}
+          }
+        },
+        "missing_data_policy": {"type": "string", "enum": ["drop_incomplete_bars", "reject", "explicit_gaps"]},
+        "gap_policy": {"type": "string", "enum": ["no_synthetic_fill", "documented_fill"]},
+        "ohlcv_schema_version": {"type": "string"},
+        "alignment": {"type": "string", "enum": ["left_closed_right_open", "left_closed_left_open"]}
+      }
+    },
+    "target": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "horizon_bars", "vol_mult", "classes", "class_order", "rule_sha256", "nan_policy"],
+      "properties": {
+        "name": {"type": "string"}, "horizon_bars": {"type": "integer", "minimum": 1},
+        "vol_mult": {"type": "string"}, "classes": {"type": "array", "items": {"type": "integer"}},
+        "class_order": {"type": "array", "items": {"type": "integer"}},
+        "rule_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "nan_policy": {"type": "string", "enum": ["drop_label", "reject"]}
+      }
+    },
+    "features": {
+      "type": "object", "additionalProperties": false,
+      "required": ["ordered", "count", "definition_sha256", "matrix_sha256", "pipeline_version", "code_sha256", "parameters", "nan_policy"],
+      "properties": {
+        "ordered": {"type": "array", "items": {"type": "string"}},
+        "count": {"type": "integer", "minimum": 1},
+        "definition_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "matrix_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "pipeline_version": {"type": "string"},
+        "code_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "parameters": {"type": "object", "additionalProperties": false,
+          "properties": {"lookback_max": {"type": "integer", "minimum": 1},
+                         "lookback_min": {"type": "integer", "minimum": 1},
+                         "lookback_step": {"type": "integer", "minimum": 1},
+                         "lookback_total": {"type": "integer", "minimum": 1}}},
+        "nan_policy": {"type": "string", "enum": ["dropna_before_split", "reject"]}
+      }
+    },
+    "training": {
+      "type": "object", "additionalProperties": false,
+      "required": ["task", "models", "ensemble", "seed", "environment", "hardware", "determinism"],
+      "properties": {
+        "task": {"type": "string", "const": "multiclass_classification"},
+        "models": {
+          "type": "object", "additionalProperties": false,
+          "required": ["rf", "xgb"],
+          "properties": {
+            "rf": {"type": "object", "additionalProperties": false, "required": ["library", "version", "params"], "properties": {"library": {"type": "string", "const": "scikit-learn"}, "version": {"type": "string"}, "params": {"type": "object"}}},
+            "xgb": {"type": "object", "additionalProperties": false, "required": ["library", "version", "params"], "properties": {"library": {"type": "string", "const": "xgboost"}, "version": {"type": "string"}, "params": {"type": "object"}}}
+          }
+        },
+        "ensemble": {"type": "object", "additionalProperties": false, "required": ["method", "weights"], "properties": {"method": {"type": "string", "const": "mean_probability"}, "weights": {"type": "object", "additionalProperties": false, "properties": {"rf": {"type": "string"}, "xgb": {"type": "string"}}}}},
+        "seed": {"type": "integer"}, "environment": {"type": "object", "additionalProperties": false,
+          "properties": {"python": {"type": "string"}, "cuda_version": {"type": ["string", "null"]},
+                         "cudnn_version": {"type": ["string", "null"]}}},
+        "hardware": {"type": "object", "additionalProperties": false, "required": ["device", "gpu_model", "cuda_version", "cpu_count", "ram_gb"], "properties": {"device": {"type": "string", "enum": ["cpu", "cuda"]}, "gpu_model": {"type": ["string", "null"]}, "cuda_version": {"type": ["string", "null"]}, "cpu_count": {"type": "integer", "minimum": 1}, "ram_gb": {"type": "integer", "minimum": 1}}},
+        "determinism": {"type": "object", "additionalProperties": false, "required": ["bitwise_reproducible", "n_jobs", "omp_num_threads", "xgb_tree_method", "xgb_deterministic_histogram", "gpu_deterministic"], "properties": {"bitwise_reproducible": {"type": "boolean"}, "n_jobs": {"type": "integer"}, "omp_num_threads": {"type": "integer"}, "xgb_tree_method": {"type": "string"}, "xgb_deterministic_histogram": {"type": "boolean"}, "gpu_deterministic": {"type": "boolean"}}}
+      }
+    },
+    "validation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["split_method", "partitions", "purge", "partition_manifest_sha256", "leakage_checks", "evaluation"],
+      "properties": {
+        "split_method": {"type": "string", "enum": ["chronological_holdout", "walk_forward"]},
+        "partitions": {
+          "type": "object", "additionalProperties": false,
+          "required": ["train", "validation", "calibration", "test"],
+          "properties": {
+            "train": {"$ref": "#/$defs/partition"},
+            "validation": {"$ref": "#/$defs/partition"},
+            "calibration": {
+              "allOf": [
+                {"$ref": "#/$defs/partition"},
+                {"type": "object", "properties": {"shared_with": {"type": ["string", "null"]}}}
+              ]
+            },
+            "test": {"$ref": "#/$defs/partition"}
+          }
+        },
+        "purge": {"type": "object", "additionalProperties": false, "required": ["rows_between_partitions", "label_horizon_bars", "label_purge_satisfied", "embargo_rows"], "properties": {"rows_between_partitions": {"type": "integer", "minimum": 0}, "label_horizon_bars": {"type": "integer", "minimum": 1}, "label_purge_satisfied": {"type": "boolean"}, "embargo_rows": {"type": "integer", "minimum": 0}}},
+        "partition_manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "leakage_checks": {"type": "object", "additionalProperties": false, "required": ["disjoint", "purge_satisfied", "labels_within_partition"], "properties": {"disjoint": {"type": "boolean"}, "purge_satisfied": {"type": "boolean"}, "labels_within_partition": {"type": "boolean"}}},
+        "evaluation": {"type": "object", "additionalProperties": false, "required": ["metric_spec_version", "primary_metric", "test_evaluated_once", "evaluation_code_sha256", "evaluated_at"], "properties": {"metric_spec_version": {"type": "string"}, "primary_metric": {"type": "string"}, "test_evaluated_once": {"type": "boolean"}, "evaluation_code_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "evaluated_at": {"type": "string", "format": "date-time"}}}
+      }
+    },
+    "calibration": {
+      "type": "object", "additionalProperties": false,
+      "required": ["mode", "base_model_id", "base_artifact_sha256", "method", "fit_partition", "calibration_input_sha256", "classes", "class_order", "n_calibrators", "artifact_sha256"],
+      "properties": {
+        "mode": {"type": "string", "enum": ["in_pipeline", "external_run"]},
+        "base_model_id": {"type": "string"},
+        "base_artifact_sha256": {"type": "object", "additionalProperties": false, "required": ["rf", "xgb"], "properties": {"rf": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "xgb": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}},
+        "method": {"type": "string", "enum": ["sigmoid", "isotonic"]},
+        "fit_partition": {"type": "string", "enum": ["validation"]},
+        "calibration_input_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "classes": {"type": "array", "items": {"type": "integer"}},
+        "class_order": {"type": "array", "items": {"type": "integer"}},
+        "n_calibrators": {"type": "integer", "minimum": 1},
+        "artifact_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "artifacts": {
+      "type": "array", "minItems": 3, "maxItems": 3,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["role", "path", "sha256", "bytes", "media_type", "format", "serializer"],
+        "properties": {
+          "role": {"type": "string", "enum": ["rf", "xgb", "calibrator"]},
+          "path": {"type": "string", "pattern": "^[^/\\\\.][^/\\\\]*$"},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "bytes": {"type": "integer", "minimum": 1},
+          "media_type": {"type": "string", "enum": ["application/octet-stream", "application/json"]},
+          "format": {"type": "string", "enum": ["joblib-pickle", "json"]},
+          "serializer": {"type": "string"}
+        }
+      }
+    },
+    "metrics": {
+      "type": "object", "additionalProperties": false,
+      "required": ["path", "sha256", "schema_version"],
+      "properties": {
+        "path": {"type": "string", "const": "metrics.json"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "schema_version": {"type": "string"}
+      }
+    }
+  },
+  "$defs": {
+    "partition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["row_start", "row_end", "n_rows", "time_start", "time_end", "class_counts", "index_sha256"],
+      "properties": {
+        "row_start": {"type": "integer", "minimum": 0},
+        "row_end": {"type": "integer", "minimum": 1},
+        "n_rows": {"type": "integer", "minimum": 1},
+        "time_start": {"type": "string", "format": "date-time"},
+        "time_end": {"type": "string", "format": "date-time"},
+        "class_counts": {"type": "array", "items": {"type": "integer", "minimum": 0}},
+        "index_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "shared_with": {"type": ["string", "null"]}
+      }
+    }
+  }
+}

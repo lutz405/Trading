@@ -4,6 +4,7 @@ Version: 0.1.0
 Summary: Quantitative BTC/USDT analysis platform (paper trading only)
 Requires-Python: >=3.12
 Requires-Dist: ccxt>=4.3
+Requires-Dist: jsonschema>=4.21
 Requires-Dist: pandas>=2.2
 Requires-Dist: pyarrow>=16
 Requires-Dist: pydantic>=2.7

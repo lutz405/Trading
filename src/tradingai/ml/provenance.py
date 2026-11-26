@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
 import re
 from datetime import datetime
 from typing import Any
@@ -270,19 +271,25 @@ def parse_json_strict(text: str) -> Any:
 # ---------------------------------------------------------------------------
 
 
-import os as _os2
-
-_SCHEMA_PATH = _os2.path.join(
-    _os2.path.dirname(_os2.path.dirname(__file__)),
-    "schemas",
-    "manifest_v3.json",
-)
+import importlib.resources as _ir
 
 
 def load_manifest_schema() -> dict[str, Any]:
-    """Load the manifest v3 JSON Schema from disk."""
-    with open(_SCHEMA_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
+    """Load the manifest v3 JSON Schema from package resources.
+
+    Tries importlib.resources first (works when installed as wheel),
+    then falls back to __file__-relative path for development mode.
+    """
+    try:
+        # importlib.resources.read_text works when package is installed
+        schema = _ir.read_text("tradingai.schemas", "manifest_v3.json")
+        return json.loads(schema)
+    except (FileNotFoundError, json.JSONDecodeError):
+        # Fallback to __file__-relative path for development mode
+        _here = os.path.dirname(os.path.abspath(__file__))
+        _schema_path = os.path.join(_here, "..", "schemas", "manifest_v3.json")
+        with open(os.path.normpath(_schema_path), "r", encoding="utf-8") as f:
+            return json.load(f)
 
 
 MANIFEST_SCHEMA: dict[str, Any] = load_manifest_schema()
@@ -663,7 +670,6 @@ def validate_event_chain(events: list[dict[str, Any]]) -> list[str]:
         sequence = event.get("sequence_number")
         prev_hash = event.get("previous_event_sha256")
         eid = event.get("event_id")
-        msh = event.get("manifest_sha256")
 
         if model_id is None:
             continue
@@ -723,19 +729,6 @@ def validate_event_chain(events: list[dict[str, Any]]) -> list[str]:
             if eid in state["seen_ids"]:
                 errors.append(f"Event {idx} ({model_id}): duplicate event_id '{eid}'")
             state["seen_ids"].add(eid)
-
-        # Verify manifest_sha256 matches JCS canonical hash
-        # (We compute the hash excluding event_sha256 if present)
-        try:
-            event_copy = {k: v for k, v in event.items() if k != "event_sha256"}
-            computed_hash = sha256_canonical(event_copy)
-            if msh is not None and msh != computed_hash:
-                errors.append(
-                    f"Event {idx} ({model_id}): manifest_sha256 '{msh[:16]}...' "
-                    f"does not match computed JCS hash '{computed_hash[:16]}...'"
-                )
-        except (ValueError, TypeError) as exc:
-            errors.append(f"Event {idx} ({model_id}): error computing hash: {exc}")
 
     # No further cross-event checks needed beyond per-event validation;
     # the sequential constraints are enforced iteratively above.
