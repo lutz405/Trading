@@ -1139,7 +1139,7 @@ Una cadena de hashes local **no puede detectar por s? sola** la eliminaci?n de e
 
 2. **Un `event_id` duplicado** para el mismo `model_id` implica **rechazo inmediato**. Tanto si los `sequence_number` son diferentes como si son iguales, la duplicaci?n de `event_id` invalida la carga.
 
-3. **Un evento fuera de orden** (i.e., despu?s de leer todos los eventos para un `model_id`, ordenarlos por `sequence_number` revela que un evento tiene un `sequence_number` que no es exactamente 1 m?s que el precedente) implica **rechazo inmediato** con `E_CHAIN_BROKEN`.
+3. **Un evento fuera de orden** (i.e., al leer los eventos para un `model_id` en el orden físico de inserción del archivo JSONL, se detecta que un `sequence_number` no es exactamente 1 más que el `sequence_number` del evento anterior para ese mismo `model_id`) implica **rechazo inmediato** con `E_CHAIN_BROKEN`. No se ordenan los eventos automáticamente; se verifican en el orden en que aparecen.
 
 4. **No reordenar autom?ticamente** el registro. El orden de inserci?n es el orden l?gico. Las marcas de tiempo `at` se registran para referencia, pero no desplazan la secuencia `sequence_number`.
 
@@ -1189,7 +1189,7 @@ La deserialización solo está permitida cuando la cadena de ciclo de vida y la 
 | Estado efectivo | `inference` | `evaluation` | `audit` (solo metadata) |
 |---|:---:|:---:|:---:|
 | `sealed` | **No**. Nunca deserializar. Solo metadata y hashes. | **No**. Nunca deserializar. Solo metadata y hashes. | **Sí** — solo metadata, sin deserializar el payload. |
-| `validated` | **No** para inferencia. Solo con autorización del verificador que emitió el informe firmado y anclaje externo válido. | **Sí** — con informe de re-evaluación firmado, cadena de ciclo de vida verificada y `manifest.sig` verificado. | **Sí** — metadata + verificación de integridad. |
+| `validated` | **No**. Inferencia no permitida para estado `validated`. | **Sí** — evaluación permitida únicamente con informe de re-evaluación firmado por verificador independiente, cadena de ciclo de vida verificada, anclaje externo válido y `manifest.sig` verificado. | **Sí** — metadata + verificación de integridad. |
 | `approved` | **No** sin firma Ed25519 válida y cadena de eventos verificada. | **No** sin cadena de ciclo de vida verificada y anclaje externo. | **Sí** — solo con firma Ed25519 válida en `manifest.sig`, evento `approved` firmado en el registro, cadena verificada y estado vigente (sin caducidad). |
 | `deprecated` | **No**. Requiere run sustituto `approved`. | **No**. Usar run sustituto. | **Sí** — metadata, sin deserializar. |
 | `revoked` | **No**. Prohibido su uso incluso si los hashes son correctos. | **No**. Prohibido. | **Solo forense** — con autorización administrativa. |
@@ -1235,8 +1235,17 @@ El evento `validated` es emitido por un verificador independiente humano o siste
 - `validated` → `approved`: Requiere evento `approved` firmado por autoridad humana, con cadena de ciclo de vida continua y estado vigente.
 - El pipeline de entrenamiento **no puede emitir** el evento `validated` por sí mismo. Solo puede emitir `sealed`. La transición a `validated` y `approved` requiere intervención humana firmada y verificación de cadena.
 
+**Identificadores y nomenclatura:**
+
+- `model_id`: identidad del modelo/run (formato `mdl_<ULID>`).
+- `event_id`: identidad única del evento individual en el registro (formato `evt_<ULID>`).
+- `manifest_sha256`: identifica el contenido exacto del manifiesto (SHA-256 hex de 64 caracteres).
+- `event_sha256`: identifica el contenido canónico del evento (SHA-256 hex de 64 caracteres).
+
+Estos identificadores son distintos y no deben confundirse. `model_id` y `event_id` no deben ser iguales. El evento incluye ambos campos: `model_id` (para vincular al run) y `event_id` (para identificar el evento individual).
+
 **Vinculación de informe, manifiesto, model_id y hashes:**
-- `model_id` debe ser idéntico en: manifiesto, metrics.json, event_id en lifecycle.jsonl, y el evento `validated`/`approved` en el registro.
+- `model_id` del evento debe coincidir con el `model_id` del manifiesto y de `metrics.json`. El `event_id` es un identificador único del evento individual y no debe ser igual a `model_id`. Verificar: (a) el `model_id` del evento coincide con el modelo del manifiesto, (b) el `event_id` es único y cumple su formato (`evt_` + ULID), (c) `manifest_sha256` coincide con el manifiesto correspondiente, (d) la cadena de eventos mantiene su continuidad.
 - `manifest_sha256` debe ser coherente entre el manifiesto y el evento en el registro.
 - Los hashes de artefactos (rf.joblib, xgb.joblib, calibrator.joblib) deben coincidir con los declarados en el manifiesto.
 - La cadena de hashes debe ser continua: `sequence_number` monotónica, `previous_event_sha256` = `event_sha256` del evento anterior, `event_sha256` calculado vía canonicalización RFC 8785.
@@ -1712,7 +1721,7 @@ Si falla, abortar. El `runs_root` y el `registry_path` deben resolverse bajo el 
 | D06 | Autoridad de aprobación | Una persona / dos personas / comité | Una persona firmante al inicio | Afecta al flujo humano |
 | D07 | Registro | JSONL / SQLite / servicio externo | JSONL + índice derivado | Afecta a concurrencia y consultas |
 | D08 | Métrica primaria | Accuracy / macro-F1 / log loss | Macro-F1 con log loss y Brier como apoyo | Afecta a selección y reporting |
-| D09 | Canonicalización | RFC 8785 / subconjunto propio | Subconjunto sin floats, documentado | Afecta al hash |
+| D09 | Canonicalización | RFC 8785 JCS (única especificación) / subconjunto propio | RFC 8785 JCS como autoridad única; la prohibición de floats se conserva como restricción adicional del esquema, no como canonicalización alternativa | Afecta al hash |
 | D10 | Compatibilidad de schema | Exacta / minor hacia atrás | Exacta para 3.x al inicio | Afecta a evolución |
 | D11 | Permisos en Windows | ACL / solo hash | Hash como control primario; ACL best-effort | Afecta a inmutabilidad local |
 | D12 | Git sucio | Permitir con marca / prohibir | Prohibir para sellar | Afecta a experimentos |
