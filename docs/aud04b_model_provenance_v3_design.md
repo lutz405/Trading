@@ -1027,7 +1027,7 @@ El loader (o cualquier verificador) debe verificar la cadena de la siguiente man
    - Confirmar que `previous_event_sha256 == "0"*64`.
    - Calcular `event_sha256` usando la canonicalizaci?n RFC 8785 y comparar con el valor declarado.
 3. **Para cada evento subsiguiente (N > 1):**
-   - Confirmar que `sequence_number == previous_event_sha256`'s successor, i.e., la secuencia es continua sin brechas (no hay n?mero sequence_saltado).
+   - Confirmar que `sequence_number == previous.sequence_number + 1`, i.e., la secuencia incrementa en exactamente 1 respecto al evento anterior sin saltos.
    - Confirmar que `previous_event_sha256` coincide con el `event_sha256` calculado del evento anterior.
    - Calcular `event_sha256` y comparar con el valor declarado.
 4. **Si en cualquier punto la cadena se rompe** (hash mismatch, sequence gap, evento duplicado, event_id duplicado), el loader debe:
@@ -1139,8 +1139,8 @@ La deserialización solo está permitida cuando la cadena de ciclo de vida y la 
 | Estado efectivo | `inference` | `evaluation` | `audit` (solo metadata) |
 |---|:---:|:---:|:---:|
 | `sealed` | **No recomendado** para inferencia producción. Solo para auditoría/evaluación controlada si no hay firma válida. | **No** para evaluación formal. Puede usarse con verificación de integridad manual. | **Sí** — solo metadata, sin deserializar el payload. |
-| `validated` | **No** para inferencia. Solo con autorización del verificador que emitió el informe firmado. | **Sí** — con informe de re-evaluación firmado y `manifest.sig` verificado. | **Sí** — metadata + verificación de integridad. |
-| `approved` | **Sí** — solo con firma Ed25519 válida en `manifest.sig`, evento `approved` firmado en el registro y estado vigente (sin caducidad). | **Sí** — con cadena de ciclo de vida verificada y firma válida. | **Sí** — metadata + firma verificada. |
+| `validated` | **No** para inferencia. Solo con autorización del verificador que emitió el informe firmado y anclaje externo válido. | **Sí** — con informe de re-evaluación firmado, cadena de ciclo de vida verificada y `manifest.sig` verificado. | **Sí** — metadata + verificación de integridad. |
+| `approved` | **No** sin firma Ed25519 válida y cadena de eventos verificada. | **No** sin cadena de ciclo de vida verificada y anclaje externo. | **Sí** — solo con firma Ed25519 válida en `manifest.sig`, evento `approved` firmado en el registro, cadena verificada y estado vigente (sin caducidad). |
 | `deprecated` | **No**. Requiere run sustituto `approved`. | **No**. Usar run sustituto. | **Sí** — metadata, sin deserializar. |
 | `revoked` | **No**. Prohibido su uso incluso si los hashes son correctos. | **No**. Prohibido. | **Solo forense** — con autorización administrativa. |
 | `rejected` | **No**. | **No**. | **No**. |
@@ -1161,12 +1161,50 @@ La deserialización solo está permitida cuando la cadena de ciclo de vida y la 
 
 - **Carga de runs `sealed` sin firma:** Un run `sealed` (sin evento `approved` en el registro) puede cargarse con propósito `audit` para inspección de metadatos y verificación de hashes, pero **no** para inferencia ni evaluación formal. Si se necesita inferencia, el run debe promocionarse a `validated` o `approved` mediante los flujos correspondientes.
 
+### 8.6 Autenticidad de los eventos validated y approved
+
+**Definición de evento `validado`:**
+
+El evento `validado` es emitido por un verificador independiente humano o sistema autorizado, después de:
+1. Re-evaluar el run sobre particiones purgadas con métricas verificables.
+2. Firmar el informe de re-evaluación con su clave Ed25519 privada.
+3. Verificar que la cadena de ciclo de vida sea continua y no rota para ese `model_id`.
+4. Anclar el `event_sha256` más reciente en un almacén de confianza externo.
+
+**Firma:** El evento `validado` debe llevar una firma Ed25519 sobre la canonicalización RFC 8785 del evento completo (todos los campos en orden canónico, incluida la cadena de hashes verificable). La firma se verifica usando la clave pública del verificador, la cual debe estar fuera del repositorio y del control del pipeline de entrenamiento.
+
+**Autenticación del informe del verificador:**
+1. El informe debe contener: `model_id`, `manifest_sha256`, métricas de evaluación, y la afirmación de que las particiones fueron evaluadas una sola vez.
+2. El loader verifica la firma Ed25519 del informe usando la clave pública registrada del verificador.
+3. El loader verifica que `manifest.sha256` en el informe coincida con el manifiesto del run.
+4. El loader verifica la continuidad de la cadena de eventos en `lifecycle.jsonl` para ese `model_id`.
+5. El loader verifica que el `event_sha256` del evento `validado` sea consistente con la canonicalización RFC 8785.
+
+**Verificación de la transición de estado:**
+- `sealed` → `validado`: Requiere evento `validado` firmado en el registro con cadena verificable y anclaje externo.
+- `validado` → `approved`: Requiere evento `approved` firmado por autoridad humana, con cadena de ciclo de vida continua y estado vigente.
+- El pipeline de entrenamiento **no puede emitir** el evento `validado` por sí mismo. Solo puede emitir `sealed`. La transición a `validado` y `approved` requiere intervención humana firmada y verificación de cadena.
+
+**Vinculación de informe, manifiesto, model_id y hashes:**
+- `model_id` debe ser idéntico en: manifiesto, metrics.json, event_id en lifecycle.jsonl, y el evento `validado`/`approved` en el registro.
+- `manifest_sha256` debe ser coherente entre el manifiesto y el evento en el registro.
+- Los hashes de artefactos (rf.joblib, xgb.joblib, calibrator.joblib) deben coincidir con los declarados en el manifiesto.
+- La cadena de hashes debe ser continua: `sequence_number` monotónica, `previous_event_sha256` = `event_sha256` del evento anterior, `event_sha256` calculado vía canonicalización RFC 8785.
+
+**Contrato coherente para validated y approved:**
+- Ambas requieren: cadena de eventos verificable, firma Ed25519 válida, anclaje externo.
+- `validado` requiere: informe firmado del verificador + cadena verificable.
+- `approved` requiere: evento `approved` firmado en el registro + cadena verificable + estado vigente + anclaje externo.
+- La ausencia de firma verificada o anclaje externo obliga al loader a modo *integrity-only* y deniega `approved`/`validado` para `inference` o `evaluation`.
+
+**Regla transversal:** si no hay firma Ed25519 verificable en el evento y no hay anclaje externo confiable, el loader debe operar en modo *integrity-only* y denegar cualquier deserialización para `inference` o `evaluation` que requiera confianza en la procedencia.
+
 #### Tabla de decisión rápida para el loader
 
 | Acción | Estado `sealed` | Estado `validated` | Estado `approved` | Sin cadena verificable |
 |---|---|---|---|---|
-| Deserializar para `inference` | **No** (solo audit) | **No** (solo con autorización del verificador) | **Sí** (con firma válida) | **No** |
-| Deserializar para `evaluation` | **No** (solo audit con integridad) | **Sí** (con informe firmado) | **Sí** (con firma válida) | **No** |
+| Deserializar para `inference` | **No** (solo audit) | **No** (solo con autorización del verificador y anclaje externo) | **No** (sin firma verificada y anclaje) | **No** |
+| Deserializar para `evaluation` | **No** (solo audit con integridad) | **Sí** (con informe firmado, cadena verificada y anclaje) | **Sí** (con firma válida y cadena verificada) | **No** |
 | Cargar metadata (`audit`) | **Sí** (hashes OK) | **Sí** (hashes OK) | **Sí** (hashes + firma OK) | **No** (cadena rota) |
 | Firmar aprobación pendiente | N/A | N/A | Requiere clave Ed25519 + evento en registro | N/A |
 
