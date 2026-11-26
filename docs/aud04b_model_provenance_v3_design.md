@@ -780,15 +780,61 @@ Toda serialización canónica en este contrato (manifiesto, métricas, eventos d
 **Reglas de canonicalización (RFC 8785 JCS):**
 
 1. **Codificación:** UTF-8 sin BOM.
-2. **Claves:** Ordenadas por punto de código Unicode (lexicográfico). No se impone un orden de propiedades específico del contrato; el orden canónico lo determina RFC 8785.
+2. **Orden de propiedades (RFC 8785 §§3.2.3 y 3.2.4):** Las propiedades de un objeto JSON se ordenan lexicográficamente por sus nombres, representados como unidades de código UTF-16 sin signo. La comparación es independiente de la configuración regional (locale-independent). La regla se aplica recursivamente a todos los objetos anidados. **No se cambia el orden de los elementos de arrays.** Este es el orden canónico definido por RFC 8785; el contrato no impone un orden de propiedades diferente.
 3. **Separadores:** `,` y `:` sin espacios adicionales.
 4. **Tipos numéricos:** RFC 8785 permite enteros y punto flotante. **Restricción adicional del esquema v3:** los decimales se representan como strings (`"0.5"`), los conteos como enteros. No se usan floats directamente. Esta restricción es de datos, no del estándar.
 5. **Prohibidos:** `NaN`, `Infinity`, claves duplicadas.
 6. **Strings:** Codificadas como cadenas JSON UTF-8; escapes según RFC 8259.
 7. **null:** Literal `null` (sin comillas).
-8. **Terminación:** El archivo termina con exactamente un `\n`.
-9. **Hash del manifiesto:** `manifest.sha256` es el SHA-256 de **los bytes exactos del archivo**, incluido el `\n` final. No se recalcula serializando de nuevo: se verifica sobre los bytes leídos.
-10. **run_fingerprint:** Se calcula sobre un subconjunto canónico de intención, con las mismas reglas, sin `model_id`, timestamps ni artefactos.
+
+**Separación inequívoca de bytes:**
+
+- **Bytes canónicos (JCS):** La salida de RFC 8785 JCS es una string UTF-8 que representa el objeto JSON canonicalizado. Estos bytes **no incluyen** un salto de línea final. JCS no añade `
+`.
+- **Representación almacenada del archivo:** El archivo `manifest.json` se almacena con exactamente un `
+` final después de los bytes canónicos. Este `
+` es un artefacto de almacenamiento, no parte de la canonicalización.
+- **Bytes para `manifest.sha256`:** El hash se calcula sobre los bytes exactos del archivo almacenado, **incluido** el `
+` final. Es decir: `SHA-256(bytes_canonicos + "
+")`. No se recalcula serializando de nuevo; se verifica sobre los bytes leídos del archivo.
+- **Bytes para `event_sha256`:** El hash se calcula sobre los bytes canónicos del evento (salida de JCS), **sin** `
+` final. Es decir: `SHA-256(bytes_canonicos_evento)`. El evento se almacena en `lifecycle.jsonl` con un `
+` al final de la línea, pero ese `
+` no forma parte del hash.
+- **Bytes para firmas Ed25519:** La firma se calcula sobre los mismos bytes canónicos del evento (sin `
+` final), idénticos a los usados para `event_sha256`.
+
+**Regla definitiva sobre `
+`:** JCS no incluye `
+`. El `
+` final es un artefacto de almacenamiento. Para `manifest.sha256`, el `
+` está incluido porque se hashea el archivo completo. Para `event_sha256` y firmas, el `
+` no está incluido porque se hashea solo la canonicalización del evento.
+
+8. **Hash del manifiesto:** `manifest.sha256` es el SHA-256 de **los bytes exactos del archivo almacenado** (bytes canónicos + `
+` final). No se recalcula serializando de nuevo: se verifica sobre los bytes leídos.
+9. **run_fingerprint:** Se calcula sobre un subconjunto canónico de intención, con las mismas reglas, sin `model_id`, timestamps ni artefactos.
+
+**Ejemplo verificable de canonicalización y hash (manifiesto simplificado):**
+
+Objeto de entrada (campos en cualquier orden):
+```json
+{"schema_version":"3.0.0","model_id":"mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W","created_at":"2026-11-25T10:00:00Z"}
+```
+
+Bytes canónicos (RFC 8785 JCS, propiedades ordenadas por unidades UTF-16 sin signo, sin espacios, UTF-8, sin `
+`):
+`{"created_at":"2026-11-25T10:00:00Z","model_id":"mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W","schema_version":"3.0.0"}`
+
+Bytes almacenados en `manifest.json` (bytes canónicos + `
+`):
+`{"created_at":"2026-11-25T10:00:00Z","model_id":"mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W","schema_version":"3.0.0"}
+`
+
+SHA-256 de `manifest.sha256`: calculado sobre los bytes almacenados (con `
+`).
+SHA-256 para `event_sha256`: calculado sobre los bytes canónicos (sin `
+`).
 
 **Evitación de referencia circular:**
 
@@ -806,7 +852,7 @@ Alternativa rechazada: incluir un campo `manifest_sha256` y excluirlo del cálcu
 {"created_at":"2026-11-25T10:00:00Z","model_id":"mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W","schema_version":"3.0.0"}
 ```
 
-Bytes canónicos (UTF-8, sin BOM, claves ordenadas por code point, sin espacios):
+Bytes canónicos (UTF-8, sin BOM, claves ordenadas por unidades de código UTF-16 sin signo, sin espacios):
 `{"created_at":"2026-11-25T10:00:00Z","model_id":"mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W","schema_version":"3.0.0"}\n`
 
 SHA-256 de los bytes anteriores (con `\n` final): se calcula sobre la representación exacta anterior. El hash se almacena en `manifest.sha256` como texto hexadecimal de 64 caracteres.
@@ -1035,14 +1081,14 @@ La canonicalizacion de cada evento para los propositos de `event_sha256` y `prev
 - `evidence` es un objeto JSON o `null`.
 - **Prohibido:** floats directos. Los decimales se representan como strings. Esta es una restriccion de datos, no una modificacion de RFC 8785.
 
-**Orden de claves:** RFC 8785 JCS ordena las claves por punto de codigo Unicode (lexicografico). El contrato NO impone un orden de propiedades diferente. La lista de campos anteriores es solo para verificar que todos esten presentes, no para dictar el orden de canonicalizacion.
+**Orden de claves:** RFC 8785 JCS ordena las claves por unidades de código UTF-16 sin signo (RFC 8785 §§3.2.3 y 3.2.4) (lexicografico). El contrato NO impone un orden de propiedades diferente. La lista de campos anteriores es solo para verificar que todos esten presentes, no para dictar el orden de canonicalizacion.
 
 **Exclusion de `event_sha256`:** El campo `event_sha256` **no forma parte** de la string que se hashea para producir itself. La canonicalizacion se calcula sobre los 9 campos enumerados arriba, sin incluir `event_sha256`. Esto evita el ciclo circular.
 
 **Procedimiento de canonicalizacion paso a paso:**
 
 1. Tomar el objeto evento con sus 9 campos.
-2. Serializar el objeto a JSON usando las reglas de §5.11 (RFC 8785 JCS: claves ordenadas por code point, separadores `,` y `:` sin espacios, UTF-8 sin BOM, sin floats, sin NaN/Infinity, sin claves duplicadas).
+2. Serializar el objeto a JSON usando las reglas de §5.11 (RFC 8785 JCS: claves ordenadas por unidades de código UTF-16 sin signo, separadores `,` y `:` sin espacios, UTF-8 sin BOM, sin floats, sin NaN/Infinity, sin claves duplicadas).
 3. Si `evidence` no es `null`, serializarlo recursivamente con las mismas reglas.
 4. El resultado es una string UTF-8.
 5. Calcular `event_sha256 = SHA-256(canonical_string)`.
@@ -1060,12 +1106,12 @@ Evento de entrada (campos en cualquier orden):
 {"event_id":"evt_01JQ8Z4A1B2C3D4E5F6G7H8J9K","model_id":"mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W","event":"sealed","at":"2026-11-25T10:00:00Z","sequence_number":1,"previous_event_sha256":"0000000000000000000000000000000000000000000000000000000000000000","manifest_sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","actor":"pipeline","evidence":null}
 ```
 
-Bytes canonicos (RFC 8785 JCS, claves ordenadas por code point, sin espacios, UTF-8):
+Bytes canonicos (RFC 8785 JCS, claves ordenadas por unidades de código UTF-16 sin signo, sin espacios, UTF-8):
 `{"actor":"pipeline","at":"2026-11-25T10:00:00Z","evidence":null,"event":"sealed","event_id":"evt_01JQ8Z4A1B2C3D4E5F6G7H8J9K","manifest_sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","model_id":"mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W","previous_event_sha256":"0000000000000000000000000000000000000000000000000000000000000000","sequence_number":1}`
 
 SHA-256 de los bytes anteriores: se calcula sobre la representacion exacta anterior. El resultado es el `event_sha256` de este evento.
 
-**Nota:** El orden de claves en los bytes canonicos es por punto de codigo Unicode (JCS), NO por el orden de campos listado arriba. La lista de campos es solo para verificar completitud.
+**Nota:** El orden de claves en los bytes canonicos es por unidades de código UTF-16 sin signo (RFC 8785 §§3.2.3 y 3.2.4) (JCS), NO por el orden de campos listado arriba. La lista de campos es solo para verificar completitud.
 
 ### 7.8.3 Verificaci?n de la cadena de eventos
 
@@ -1209,7 +1255,7 @@ La deserialización solo está permitida cuando la cadena de ciclo de vida y la 
 
 - **Corrida entre verificación y deserialización (TOCTOU):** El loader debe usar el buffer único verificado en los pasos 7-9 (hashes, estado, coherencia) y **nunca** volver a abrir la ruta del archivo para `joblib.load`. La deserialización debe ocurrir exclusivamente sobre los bytes ya leídos y cuya integridad fue comprobada.
 
-- **Carga de runs `sealed` sin firma:** Un run `sealed` (sin evento `approved` en el registro) puede cargarse con propósito `audit` para inspección de metadatos y verificación de hashes, pero **no** para inferencia ni evaluación formal. Si se necesita inferencia, el run debe promocionarse a `validated` o `approved` mediante los flujos correspondientes.
+- **Carga de runs `sealed` sin firma:** Un run `sealed` (sin evento `approved` en el registro) puede cargarse con propósito `audit` para inspección de metadatos y verificación de hashes, pero **no** para inferencia ni evaluación formal. La inferencia requiere exclusivamente el estado `approved`. No es suficiente promocionar a `validated`.
 
 ### 8.6 Autenticidad de los eventos validated y approved
 
