@@ -509,9 +509,9 @@ Las particiones se expresan en coordenadas de fila etiquetada. Si el índice del
         "time_start": "2026-04-17T08:00:00Z",
         "time_end": "2026-05-22T19:00:00Z",
         "class_counts": [
-          510,
-          115,
-          227
+          350,
+          255,
+          247
         ],
         "index_sha256": "9999999999999999999999999999999999999999999999999999999999999999"
       },
@@ -522,9 +522,9 @@ Las particiones se expresan en coordenadas de fila etiquetada. Si el índice del
         "time_start": "2026-04-17T08:00:00Z",
         "time_end": "2026-05-22T19:00:00Z",
         "class_counts": [
-          510,
-          115,
-          227
+          350,
+          255,
+          247
         ],
         "index_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "shared_with": "validation"
@@ -536,9 +536,9 @@ Las particiones se expresan en coordenadas de fila etiquetada. Si el índice del
         "time_start": "2026-05-23T00:00:00Z",
         "time_end": "2026-06-27T11:00:00Z",
         "class_counts": [
-          520,
-          118,
-          214
+          350,
+          255,
+          247
         ],
         "index_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
       }
@@ -773,14 +773,43 @@ Las particiones se expresan en coordenadas de fila etiquetada. Si el índice del
 
 ### 5.11 Serialización canónica y hash del manifiesto
 
-**Reglas de canonicalización:**
+**Canonicalización única: RFC 8785 JCS.**
 
-1. UTF-8 sin BOM; solo JSON válido; prohibidos `NaN`, `Infinity` y claves duplicadas.
-2. Claves ordenadas por punto de código Unicode; separadores `,` y `:` sin espacios.
-3. Sin floats en el manifiesto: los decimales se representan como strings (`"0.5"`), los conteos como enteros.
-4. El archivo termina con exactamente un `\n`.
-5. `manifest.sha256` es el SHA-256 de **los bytes exactos del archivo**, incluido el `\n` final. No se recalcula serializando de nuevo: se verifica sobre los bytes leídos.
-6. `run_fingerprint` se calcula sobre un subconjunto canónico de intención, con las mismas reglas, sin `model_id`, timestamps ni artefactos.
+Toda serialización canónica en este contrato (manifiesto, métricas, eventos de ciclo de vida) sigue el **JSON Canonicalization Scheme (RFC 8785)** sin variantes incompatibles. Las restricciones adicionales del esquema (listadas abajo) se aplican como restricciones de datos, no como modificaciones del estándar.
+
+**Reglas de canonicalización (RFC 8785 JCS):**
+
+1. **Codificación:** UTF-8 sin BOM.
+2. **Claves:** Ordenadas por punto de código Unicode (lexicográfico). No se impone un orden de propiedades específico del contrato; el orden canónico lo determina RFC 8785.
+3. **Separadores:** `,` y `:` sin espacios adicionales.
+4. **Tipos numéricos:** RFC 8785 permite enteros y punto flotante. **Restricción adicional del esquema v3:** los decimales se representan como strings (`"0.5"`), los conteos como enteros. No se usan floats directamente. Esta restricción es de datos, no del estándar.
+5. **Prohibidos:** `NaN`, `Infinity`, claves duplicadas.
+6. **Strings:** Codificadas como cadenas JSON UTF-8; escapes según RFC 8259.
+7. **null:** Literal `null` (sin comillas).
+8. **Terminación:** El archivo termina con exactamente un `\n`.
+9. **Hash del manifiesto:** `manifest.sha256` es el SHA-256 de **los bytes exactos del archivo**, incluido el `\n` final. No se recalcula serializando de nuevo: se verifica sobre los bytes leídos.
+10. **run_fingerprint:** Se calcula sobre un subconjunto canónico de intención, con las mismas reglas, sin `model_id`, timestamps ni artefactos.
+
+**Evitación de referencia circular:**
+
+- `manifest.json` contiene hashes de `rf`, `xgb`, `calibrator` y `metrics.json`.
+- `metrics.json` contiene `model_id`, hashes de artefactos e `index_sha256`, pero **no** el hash del manifiesto.
+- `manifest.sha256` es un archivo separado con el hash del manifiesto; no se incluye dentro de él.
+- `registry/lifecycle.jsonl` registra `(model_id, manifest_sha256, evento)`.
+- La firma, si existe, cubre los bytes del manifiesto o el contenido de `manifest.sha256`.
+
+Alternativa rechazada: incluir un campo `manifest_sha256` y excluirlo del cálculo. Es frágil, difícil de auditar y fácil de implementar mal. El hash desacoplado es explícito y verificable con herramientas estándar.
+
+**Ejemplo verificable de canonicalización y hash (manifiesto simplificado):**
+
+```json
+{"created_at":"2026-11-25T10:00:00Z","model_id":"mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W","schema_version":"3.0.0"}
+```
+
+Bytes canónicos (UTF-8, sin BOM, claves ordenadas por code point, sin espacios):
+`{"created_at":"2026-11-25T10:00:00Z","model_id":"mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W","schema_version":"3.0.0"}\n`
+
+SHA-256 de los bytes anteriores (con `\n` final): se calcula sobre la representación exacta anterior. El hash se almacena en `manifest.sha256` como texto hexadecimal de 64 caracteres.
 
 **Evitación de referencia circular:**
 
@@ -806,7 +835,7 @@ Alternativa rechazada: incluir un campo `manifest_sha256` y excluirlo del cálcu
 | **I4** | Los hashes se verifican antes de cualquier deserialización | Loader: bytes en memoria → hash → recién después `joblib.load` | S01, I15 |
 | **I5** | El loader rechaza archivos faltantes, hashes incorrectos e incompatibilidades | Loader fail-closed con códigos de error | I02-I04, I12 |
 | **I6** | Las métricas están vinculadas a dataset, partición y modelo evaluado | `metrics.json` + `index_sha256` + hash de artefactos | U08, I13 |
-| **I7** | No se declara validado un modelo con metadatos obligatorios ausentes | Validador de schema e invariantes | U01, I03 |
+| **I7** | No se declara validated un modelo con metadatos obligatorios ausentes | Validador de schema e invariantes | U01, I03 |
 | **I8** | Un modelo experimental no se convierte automáticamente en aprobado | Ciclo de vida separado; aprobación humana firmada | U07, I14 |
 | **I9** | No se sobrescribe una ejecución existente | Publicación con renombrado y comprobación de existencia | I10 |
 | **I10** | Un manifiesto inválido nunca produce aprobación implícita | Default deny; estado ausente = rechazo | U01, S06 |
@@ -960,7 +989,7 @@ El ULID aporta orden temporal aproximado y 80 bits de aleatoriedad; la unicidad 
 | Staging huérfano > 24 h | Movido a `.failed` con motivo `orphaned_staging` | No |
 | `failure.json` ausente o corrupto | Se conserva; se marca `unclassified_failure` | No |
 
-`failure.json` contiene `model_id`, `stage`, `error_class`, `message` redactado, `at` y `manifest_sha256` si llegó a existir. Los fallidos se conservan 30 días por defecto, configurables; **nunca se auto-eliminan runs sellados, validados o aprobados**.
+`failure.json` contiene `model_id`, `stage`, `error_class`, `message` redactado, `at` y `manifest_sha256` si llegó a existir. Los fallidos se conservan 30 días por defecto, configurables; **nunca se auto-eliminan runs sellados, validated o aprobados**.
 
 ### 7.7 Colisiones y concurrencia
 
@@ -986,38 +1015,59 @@ El registro utiliza una **cadena de eventos monot?nica por model_id**. Cada `mod
 
 **Evento ?nico:** Cada evento debe tener un `event_id` ?nico (formato `evt_` + ULID). La duplicaci?n de `event_id` en la cadena para el mismo `model_id` es una violaci?n grave y debe provocar el rechazo de la carga.
 
-#### 7.8.2 Canonicalizaci?n RFC 8785 (JKCS)
+#### 7.8.2 Canonicalizacion RFC 8785 (JKCS)
 
-La canonicalizaci?n de cada evento para los prop?sitos de `event_sha256` y `previous_event_sha256` sigue el **JSON Canonicalization Scheme (RFC 8785)** adaptado para este contexto. Este esquema garantiza que la misma estructura de datos siempre produzca la misma representaci?n binaria, independientemente de la plataforma o lenguaje empleado.
+La canonicalizacion de cada evento para los propositos de `event_sha256` y `previous_event_sha256` sigue la **especificacion unica de canonicalizacion** definida en **§5.11**, que adopta **RFC 8785 JCS** sin variantes incompatibles.
 
-**Regules de canonicalizaci?n:**
+**Regla fundamental:** §5.11 es la autoridad para toda canonicalizacion en este contrato. §7.8.2 no redefine el estandar; solo documenta las restricciones de datos y el procedimiento de hashing para eventos.
 
-1. **Codificaci?n:** UTF-8 sin BOM.
-2. **Estructura del documento:** El evento se representa como un objeto JSON con los campos en el orden can?nico especificado a continuaci?n. Se proh?ben las claves duplicadas.
-3. **Tipos de datos:**
-   - **N?meros enteros:** Se serializan como n?meros enteros JSON sin cifrado leading zero (excepto el cero mismo: `0`), ni espacios innecesarios. Ejemplo: `42`, no `042` ni ` 42`.
-   - **N?meros de punto flotante:** No est?n permitidos en el evento. Si se requiere un n?mero real, debe convertirse a una representaci?n de fixed-point (entero) con precisi?n documentada, o excluirse.
-   - **Strings:** Se codifican como cadenas JSON UTF-8 sin BOM. Los caracteres especiales deben escaparse seg?n la especificaci?n JSON est?ndar (RFC 8259). No se permite la inclusi?n de l?neas enteras sin procesar.
-   - **null:** Se representa como el literal JSON `null` (cuatro letras min?sculas, sin comillas circundantes).
-4. **Orden de campos can?nico:** Los campos aparecen en el siguiente orden obligatorio. Este orden es parte integral de la canonicalizaci?n; cambiar el orden produce una cadena diferente.
-   `sequence_number`, `previous_event_sha256`, `event_id`, `model_id`, `event`, `at`, `manifest_sha256`, `actor`, `evidence`.
-5. **Separadores:** Los separadores de objeto y elementos deben ser `,` (coma) y `:` (dos puntos) seg?n el est?ndar JSON, sin espacios adicionales alrededor de los separadores en la representaci?n can?nica (esto es consistente con la canonicalizaci?n RFC 8785 Level 1).
-6. **Evidence serializaci?n:**
-   - Si `evidence` es `null`, se representa como la palabra `null` en la posici?n can?nica.
-   - Si `evidence` es un objeto JSON, debe serializarse usando la canonicalizaci?n JSON RFC 8785 recursivamente (mismo orden de campos, mismos separadores, sin espacio despu?s de los dos puntos ni antes de las comas).
-   - No se permiten valores `NaN` o `Infinity` en ning?n nivel del objeto `evidence`.
-7. **Exclusi?n del propio `event_sha256`:** El campo `event_sha256` **no forma parte** de la string que se hashea para producir itself. La canonicalizaci?n se calcula sobre los 9 campos enumerados en el paso 4, sin incluir `event_sha256`. Esto evita el ciclo circular y es consistente con la dise?o del contrato.
+**Restricciones de datos para eventos (adicionales a §5.11):**
+- Los campos del evento son exactamente 9: `sequence_number`, `previous_event_sha256`, `event_id`, `model_id`, `event`, `at`, `manifest_sha256`, `actor`, `evidence`.
+- Todos los campos deben estar presentes. La ausencia de cualquiera implica rechazo (`E_MANIFEST_PARSE`).
+- `sequence_number` es un entero JSON (sin leading zeros).
+- `previous_event_sha256` es una string hex de 64 caracteres.
+- `event_id` es una string con formato `evt_` + ULID.
+- `model_id` es una string opaca.
+- `event` es una string con valores permitidos: `sealed`, `validated`, `approved`, `deprecated`, `revoked`.
+- `at` es una string RFC 3339 UTC.
+- `manifest_sha256` es una string hex de 64 caracteres.
+- `actor` es una string con el identificador del actor.
+- `evidence` es un objeto JSON o `null`.
+- **Prohibido:** floats directos. Los decimales se representan como strings. Esta es una restriccion de datos, no una modificacion de RFC 8785.
 
-**Procedimiento de canonicalizaci?n paso a paso:**
+**Orden de claves:** RFC 8785 JCS ordena las claves por punto de codigo Unicode (lexicografico). El contrato NO impone un orden de propiedades diferente. La lista de campos anteriores es solo para verificar que todos esten presentes, no para dictar el orden de canonicalizacion.
 
-1. Tomar el objeto evento con sus 9 campos en el orden can?nico.
-2. Serializar el objeto a JSON usando las reglas de la regla 4 (orden de campos, sin espacios despu?s de `:` ni antes de `,`, sin BOM, UTF-8).
-3. Si `evidence` no es `null`, reemplazar el valor del campo `evidence` por la serializaci?ncan?nica recursiva del objeto `evidence` (mismo proceso recursivo).
+**Exclusion de `event_sha256`:** El campo `event_sha256` **no forma parte** de la string que se hashea para producir itself. La canonicalizacion se calcula sobre los 9 campos enumerados arriba, sin incluir `event_sha256`. Esto evita el ciclo circular.
+
+**Procedimiento de canonicalizacion paso a paso:**
+
+1. Tomar el objeto evento con sus 9 campos.
+2. Serializar el objeto a JSON usando las reglas de §5.11 (RFC 8785 JCS: claves ordenadas por code point, separadores `,` y `:` sin espacios, UTF-8 sin BOM, sin floats, sin NaN/Infinity, sin claves duplicadas).
+3. Si `evidence` no es `null`, serializarlo recursivamente con las mismas reglas.
 4. El resultado es una string UTF-8.
 5. Calcular `event_sha256 = SHA-256(canonical_string)`.
 6. Para el evento N>1, calcular `previous_event_sha256 = SHA-256(canonical_string_del_evento_anterior)`. Para el evento 1, `previous_event_sha256 = "0"*64`.
 
-#### 7.8.3 Verificaci?n de la cadena de eventos
+**Bytes que se hashean y firman:**
+- `event_sha256`: SHA-256 de los bytes canonicos del evento (9 campos, sin `event_sha256`).
+- `previous_event_sha256`: SHA-256 de los bytes canonicos del evento anterior.
+- Firma Ed25519 (si aplica): sobre los mismos bytes canonicos del evento completo.
+
+**Ejemplo verificable de canonicalizacion y hash (evento simplificado):**
+
+Evento de entrada (campos en cualquier orden):
+```json
+{"event_id":"evt_01JQ8Z4A1B2C3D4E5F6G7H8J9K","model_id":"mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W","event":"sealed","at":"2026-11-25T10:00:00Z","sequence_number":1,"previous_event_sha256":"0000000000000000000000000000000000000000000000000000000000000000","manifest_sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","actor":"pipeline","evidence":null}
+```
+
+Bytes canonicos (RFC 8785 JCS, claves ordenadas por code point, sin espacios, UTF-8):
+`{"actor":"pipeline","at":"2026-11-25T10:00:00Z","evidence":null,"event":"sealed","event_id":"evt_01JQ8Z4A1B2C3D4E5F6G7H8J9K","manifest_sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","model_id":"mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W","previous_event_sha256":"0000000000000000000000000000000000000000000000000000000000000000","sequence_number":1}`
+
+SHA-256 de los bytes anteriores: se calcula sobre la representacion exacta anterior. El resultado es el `event_sha256` de este evento.
+
+**Nota:** El orden de claves en los bytes canonicos es por punto de codigo Unicode (JCS), NO por el orden de campos listado arriba. La lista de campos es solo para verificar completitud.
+
+### 7.8.3 Verificaci?n de la cadena de eventos
 
 El loader (o cualquier verificador) debe verificar la cadena de la siguiente manera para cada `model_id`:
 
@@ -1042,7 +1092,7 @@ El loader (o cualquier verificador) debe verificar la cadena de la siguiente man
 | **Truncamiento** (eliminaci?n de eventos finales) | Una cadena local **no puede detectar por s? sola** la eliminaci?n de su propia cola. La ?nica defensa es un **anclaje externo** (ver ?7.8.6). Si se sospecha truncamiento (por ejemplo, el run esperaba m?s eventos pero el registro se detuvo), y no hay anclaje externo v?lido, el loader debe cambiar al modo *integrity-only*. | Modo integrity-only: sin deserializaci?n `approved`/`validated`. Permitir solo `audit` con verificaci?n de hashes. |
 | **Eliminaci?n de eventos del medio** | Si `sequence_number` salta de N a M donde M > N+1, se detecta brecha. | Rechazar con `E_CHAIN_BROKEN`. |
 | **Sustituci?n de evento** | Si el `event_sha256` calculado no coincide con el declarado, o el `previous_event_sha256` no coincide con el `event_sha256` del anterior. | Rechazar con `E_CHAIN_BROKEN`. |
-| **Reordenamiento** | Si los `sequence_number` no son estrictamente crecientes despu?s de ordenar por `at` (marca de tiempo). | Rechazar con `E_CHAIN_BROKEN`. No reordenar autom?ticamente. |
+| **Reordenamiento** | Si los `sequence_number` no son estrictamente crecientes en el orden de insercion del archivo JSONL (la secuencia logica depende exclusivamente de `sequence_number`, no de timestamps). Los timestamps son informativos y no se usan para validar el orden. | Rechazar con `E_CHAIN_BROKEN`. No reordenar autom?ticamente. |
 | **Duplicados de `sequence_number`** | Si dos eventos tienen el mismo `sequence_number` para el mismo `model_id`. | Rechazar ambos eventos con `E_CHAIN_DUPLICATE`. |
 | **Duplicados de `event_id`** | Si dos eventos tienen el mismo `event_id` para el mismo `model_id`. | Rechazar ambos eventos con `E_EVENT_ID_DUPLICATE`. |
 | **Falsificaci?n de `previous_event_sha256`** | Si el `previous_event_sha256` no es el hash del evento anterior calculado canonicalmente. | Rechazar con `E_CHAIN_BROKEN`. |
@@ -1138,7 +1188,7 @@ La deserialización solo está permitida cuando la cadena de ciclo de vida y la 
 
 | Estado efectivo | `inference` | `evaluation` | `audit` (solo metadata) |
 |---|:---:|:---:|:---:|
-| `sealed` | **No recomendado** para inferencia producción. Solo para auditoría/evaluación controlada si no hay firma válida. | **No** para evaluación formal. Puede usarse con verificación de integridad manual. | **Sí** — solo metadata, sin deserializar el payload. |
+| `sealed` | **No**. Nunca deserializar. Solo metadata y hashes. | **No**. Nunca deserializar. Solo metadata y hashes. | **Sí** — solo metadata, sin deserializar el payload. |
 | `validated` | **No** para inferencia. Solo con autorización del verificador que emitió el informe firmado y anclaje externo válido. | **Sí** — con informe de re-evaluación firmado, cadena de ciclo de vida verificada y `manifest.sig` verificado. | **Sí** — metadata + verificación de integridad. |
 | `approved` | **No** sin firma Ed25519 válida y cadena de eventos verificada. | **No** sin cadena de ciclo de vida verificada y anclaje externo. | **Sí** — solo con firma Ed25519 válida en `manifest.sig`, evento `approved` firmado en el registro, cadena verificada y estado vigente (sin caducidad). |
 | `deprecated` | **No**. Requiere run sustituto `approved`. | **No**. Usar run sustituto. | **Sí** — metadata, sin deserializar. |
@@ -1163,39 +1213,39 @@ La deserialización solo está permitida cuando la cadena de ciclo de vida y la 
 
 ### 8.6 Autenticidad de los eventos validated y approved
 
-**Definición de evento `validado`:**
+**Definición de evento `validated`:**
 
-El evento `validado` es emitido por un verificador independiente humano o sistema autorizado, después de:
+El evento `validated` es emitido por un verificador independiente humano o sistema autorizado, después de:
 1. Re-evaluar el run sobre particiones purgadas con métricas verificables.
 2. Firmar el informe de re-evaluación con su clave Ed25519 privada.
 3. Verificar que la cadena de ciclo de vida sea continua y no rota para ese `model_id`.
 4. Anclar el `event_sha256` más reciente en un almacén de confianza externo.
 
-**Firma:** El evento `validado` debe llevar una firma Ed25519 sobre la canonicalización RFC 8785 del evento completo (todos los campos en orden canónico, incluida la cadena de hashes verificable). La firma se verifica usando la clave pública del verificador, la cual debe estar fuera del repositorio y del control del pipeline de entrenamiento.
+**Firma:** El evento `validated` debe llevar una firma Ed25519 sobre la canonicalización RFC 8785 del evento completo (todos los campos en orden canónico, incluida la cadena de hashes verificable). La firma se verifica usando la clave pública del verificador, la cual debe estar fuera del repositorio y del control del pipeline de entrenamiento.
 
 **Autenticación del informe del verificador:**
 1. El informe debe contener: `model_id`, `manifest_sha256`, métricas de evaluación, y la afirmación de que las particiones fueron evaluadas una sola vez.
 2. El loader verifica la firma Ed25519 del informe usando la clave pública registrada del verificador.
 3. El loader verifica que `manifest.sha256` en el informe coincida con el manifiesto del run.
 4. El loader verifica la continuidad de la cadena de eventos en `lifecycle.jsonl` para ese `model_id`.
-5. El loader verifica que el `event_sha256` del evento `validado` sea consistente con la canonicalización RFC 8785.
+5. El loader verifica que el `event_sha256` del evento `validated` sea consistente con la canonicalización RFC 8785.
 
 **Verificación de la transición de estado:**
-- `sealed` → `validado`: Requiere evento `validado` firmado en el registro con cadena verificable y anclaje externo.
-- `validado` → `approved`: Requiere evento `approved` firmado por autoridad humana, con cadena de ciclo de vida continua y estado vigente.
-- El pipeline de entrenamiento **no puede emitir** el evento `validado` por sí mismo. Solo puede emitir `sealed`. La transición a `validado` y `approved` requiere intervención humana firmada y verificación de cadena.
+- `sealed` → `validated`: Requiere evento `validated` firmado en el registro con cadena verificable y anclaje externo.
+- `validated` → `approved`: Requiere evento `approved` firmado por autoridad humana, con cadena de ciclo de vida continua y estado vigente.
+- El pipeline de entrenamiento **no puede emitir** el evento `validated` por sí mismo. Solo puede emitir `sealed`. La transición a `validated` y `approved` requiere intervención humana firmada y verificación de cadena.
 
 **Vinculación de informe, manifiesto, model_id y hashes:**
-- `model_id` debe ser idéntico en: manifiesto, metrics.json, event_id en lifecycle.jsonl, y el evento `validado`/`approved` en el registro.
+- `model_id` debe ser idéntico en: manifiesto, metrics.json, event_id en lifecycle.jsonl, y el evento `validated`/`approved` en el registro.
 - `manifest_sha256` debe ser coherente entre el manifiesto y el evento en el registro.
 - Los hashes de artefactos (rf.joblib, xgb.joblib, calibrator.joblib) deben coincidir con los declarados en el manifiesto.
 - La cadena de hashes debe ser continua: `sequence_number` monotónica, `previous_event_sha256` = `event_sha256` del evento anterior, `event_sha256` calculado vía canonicalización RFC 8785.
 
 **Contrato coherente para validated y approved:**
 - Ambas requieren: cadena de eventos verificable, firma Ed25519 válida, anclaje externo.
-- `validado` requiere: informe firmado del verificador + cadena verificable.
+- `validated` requiere: informe firmado del verificador + cadena verificable.
 - `approved` requiere: evento `approved` firmado en el registro + cadena verificable + estado vigente + anclaje externo.
-- La ausencia de firma verificada o anclaje externo obliga al loader a modo *integrity-only* y deniega `approved`/`validado` para `inference` o `evaluation`.
+- La ausencia de firma verificada o anclaje externo obliga al loader a modo *integrity-only* y deniega `approved`/`validated` para `inference` o `evaluation`.
 
 **Regla transversal:** si no hay firma Ed25519 verificable en el evento y no hay anclaje externo confiable, el loader debe operar en modo *integrity-only* y denegar cualquier deserialización para `inference` o `evaluation` que requiera confianza en la procedencia.
 
