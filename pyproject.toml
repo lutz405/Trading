@@ -9,6 +9,7 @@ description = "Quantitative BTC/USDT analysis platform (paper trading only)"
 requires-python = ">=3.12"
 dependencies = [
   "ccxt>=4.3",
+  "jsonschema>=4.21",
   "pandas>=2.2",
   "pyarrow>=16",
   "pydantic>=2.7",

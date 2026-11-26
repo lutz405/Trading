@@ -16,7 +16,15 @@
     "sealed_at": {"type": "string", "format": "date-time"},
     "status_at_seal": {"type": "string", "const": "sealed"},
     "run_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "extensions": {"type": "object"},
+    "extensions": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-zA-Z][a-zA-Z0-9._-]*\\.[a-zA-Z][a-zA-Z0-9._-]*$": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
     "git": {
       "type": "object", "additionalProperties": false,
       "required": ["commit", "dirty", "branch", "tag", "source_bundle_sha256"],
@@ -85,7 +93,11 @@
         "matrix_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
         "pipeline_version": {"type": "string"},
         "code_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-        "parameters": {"type": "object"},
+        "parameters": {"type": "object", "additionalProperties": false,
+          "properties": {"lookback_max": {"type": "integer", "minimum": 1},
+                         "lookback_min": {"type": "integer", "minimum": 1},
+                         "lookback_step": {"type": "integer", "minimum": 1},
+                         "lookback_total": {"type": "integer", "minimum": 1}}},
         "nan_policy": {"type": "string", "enum": ["dropna_before_split", "reject"]}
       }
     },
@@ -102,8 +114,10 @@
             "xgb": {"type": "object", "additionalProperties": false, "required": ["library", "version", "params"], "properties": {"library": {"type": "string", "const": "xgboost"}, "version": {"type": "string"}, "params": {"type": "object"}}}
           }
         },
-        "ensemble": {"type": "object", "additionalProperties": false, "required": ["method", "weights"], "properties": {"method": {"type": "string", "const": "mean_probability"}, "weights": {"type": "object"}}},
-        "seed": {"type": "integer"}, "environment": {"type": "object"},
+        "ensemble": {"type": "object", "additionalProperties": false, "required": ["method", "weights"], "properties": {"method": {"type": "string", "const": "mean_probability"}, "weights": {"type": "object", "additionalProperties": false, "properties": {"rf": {"type": "string"}, "xgb": {"type": "string"}}}}},
+        "seed": {"type": "integer"}, "environment": {"type": "object", "additionalProperties": false,
+          "properties": {"python": {"type": "string"}, "cuda_version": {"type": ["string", "null"]},
+                         "cudnn_version": {"type": ["string", "null"]}}},
         "hardware": {"type": "object", "additionalProperties": false, "required": ["device", "gpu_model", "cuda_version", "cpu_count", "ram_gb"], "properties": {"device": {"type": "string", "enum": ["cpu", "cuda"]}, "gpu_model": {"type": ["string", "null"]}, "cuda_version": {"type": ["string", "null"]}, "cpu_count": {"type": "integer", "minimum": 1}, "ram_gb": {"type": "integer", "minimum": 1}}},
         "determinism": {"type": "object", "additionalProperties": false, "required": ["bitwise_reproducible", "n_jobs", "omp_num_threads", "xgb_tree_method", "xgb_deterministic_histogram", "gpu_deterministic"], "properties": {"bitwise_reproducible": {"type": "boolean"}, "n_jobs": {"type": "integer"}, "omp_num_threads": {"type": "integer"}, "xgb_tree_method": {"type": "string"}, "xgb_deterministic_histogram": {"type": "boolean"}, "gpu_deterministic": {"type": "boolean"}}}
       }
