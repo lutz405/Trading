@@ -420,15 +420,26 @@ def validate_event(event: dict[str, Any], previous_event: dict[str, Any] | None 
 
     errors: list[str] = []
 
+    # Per S1-R5: event_sha256 is mandatory; manifest_sha256 is a manifest-level
+    # concept and is not required at the individual event level.
     required_fields = [
-        "sequence_number", "previous_event_sha256", "event_id",
-        "model_id", "event", "at", "manifest_sha256", "actor", "evidence",
+        "sequence_number", "event_id", "model_id", "event", "at",
+        "actor", "evidence",
     ]
+    # event_sha256 is mandatory per S1-R5
+    if "event_sha256" not in event:
+        errors.append("Missing required field: event_sha256")
+    else:
+        # Validate SHA-256 format
+        if not validate_sha256(event["event_sha256"]):
+            errors.append("Invalid event_sha256 format")
+
     for field in required_fields:
         if field not in event:
             errors.append(f"Missing required field: {field}")
 
-    allowed_fields = set(required_fields) | {"event_sha256"}
+    # Allow event_sha256 and previous_event_sha256 as valid event fields
+    allowed_fields = {"event_sha256", "previous_event_sha256"} | set(required_fields)
     for key in event:
         if key not in allowed_fields:
             errors.append(f"Unknown field in event: {key}")
@@ -628,7 +639,7 @@ def validate_event_chain(events: list[dict[str, Any]]) -> list[str]:
       and references the prior event's event_sha256.
     - event_id must be unique within each model_id.
     - event_sha256 must match the JCS canonical hash of the event
-      (excluding the field itself).
+      (excluding the field itself). This is mandatory for every event.
     - Different model_id groups maintain separate chains.
     - No event may belong to a different model_id chain than previous.
     - Unknown/extra fields in events are rejected.
@@ -642,21 +653,30 @@ def validate_event_chain(events: list[dict[str, Any]]) -> list[str]:
     errors: list[str] = []
 
     # Track state per model_id
-    # For each model: next_expected_sequence, prior_event_sha256, seen event_ids
+    # For each model: next_expected_sequence, prior_computed_hash (derived from event_sha256),
+    # seen event_ids
     model_state: dict[str, dict[str, Any]] = {}
 
     allowed_event_types = {"sealed", "validated", "approved", "deprecated", "revoked"}
 
     for idx, event in enumerate(events):
-        # Basic field presence check
-        required = ["sequence_number", "previous_event_sha256", "event_id",
-                     "model_id", "event", "at", "manifest_sha256", "actor", "evidence"]
+        # Basic field presence check (event_sha256 handled separately per S1-R5)
+        required = ["sequence_number", "event_id", "model_id",
+                     "event", "at", "actor", "evidence"]
         for field in required:
             if field not in event:
                 errors.append(f"Event {idx}: missing required field '{field}'")
 
+        # event_sha256 is mandatory per S1-R5
+        if "event_sha256" not in event:
+            errors.append(f"Event {idx}: missing required field 'event_sha256'")
+        else:
+            # Validate SHA-256 format
+            if not validate_sha256(event["event_sha256"]):
+                errors.append(f"Event {idx}: invalid event_sha256 format")
+
         # Unknown fields
-        allowed_event_fields = set(required) | {"event_sha256"}
+        allowed_event_fields = set(required) | {"event_sha256", "previous_event_sha256"}
         for key in event:
             if key not in allowed_event_fields:
                 errors.append(f"Event {idx}: unknown field '{key}'")
@@ -668,8 +688,8 @@ def validate_event_chain(events: list[dict[str, Any]]) -> list[str]:
 
         model_id = event.get("model_id")
         sequence = event.get("sequence_number")
-        prev_hash = event.get("previous_event_sha256")
         eid = event.get("event_id")
+        declared_hash = event.get("event_sha256")
 
         if model_id is None:
             continue
@@ -678,7 +698,7 @@ def validate_event_chain(events: list[dict[str, Any]]) -> list[str]:
         if model_id not in model_state:
             model_state[model_id] = {
                 "next_sequence": 1,
-                "prior_hash": None,
+                "prior_computed_hash": None,
                 "seen_ids": set(),
             }
 
@@ -698,14 +718,12 @@ def validate_event_chain(events: list[dict[str, Any]]) -> list[str]:
                         f"Event {idx} ({model_id}): first event must have sequence_number == 1, "
                         f"got {sequence}"
                     )
-                if prev_hash != "0" * 64:
+                if event.get("previous_event_sha256") != "0" * 64:
                     errors.append(
-                        f"Event {idx} ({model_id}): first event must have previous_event_sha256 == '0'*64, "
-                        f"got '{str(prev_hash)[:16]}...'"
+                        f"Event {idx} ({model_id}): first event must have previous_event_sha256 == '0'*64"
                     )
                 # After first event, next expected is 2
                 state["next_sequence"] = 2
-                state["prior_hash"] = prev_hash
             else:
                 # Subsequent event: must increment by exactly 1
                 if sequence != state["next_sequence"]:
@@ -713,22 +731,40 @@ def validate_event_chain(events: list[dict[str, Any]]) -> list[str]:
                         f"Event {idx} ({model_id}): sequence_number must be {state['next_sequence']} "
                         f"(continuation from {sequence - 1}), got {sequence}"
                     )
-                # Verify previous_event_sha256 matches prior event's hash
-                if prev_hash != state["prior_hash"]:
+                # Verify previous_event_sha256 matches prior event's computed hash
+                if event.get("previous_event_sha256") != state["prior_computed_hash"]:
                     errors.append(
-                        f"Event {idx} ({model_id}): previous_event_sha256 does not match prior event's hash"
+                        f"Event {idx} ({model_id}): previous_event_sha256 does not match prior event's computed event_sha256"
                     )
-                # Update state
-                state["next_sequence"] += 1
-                # The new prior_hash is the computed hash of THIS event (will be verified below)
-                # But we store the provided previous_event_sha256 for the next iteration
-                state["prior_hash"] = prev_hash
+
+        # Compute JCS canonical hash of the event, excluding event_sha256
+        try:
+            event_copy = {k: v for k, v in event.items() if k != "event_sha256"}
+            computed_hash = sha256_canonical(event_copy)
+        except (ValueError, TypeError) as exc:
+            errors.append(f"Event {idx} ({model_id}): error computing JCS hash: {exc}")
+            computed_hash = None
+
+        # Compare computed hash with declared event_sha256
+        if computed_hash is not None and declared_hash is not None:
+            if computed_hash != declared_hash:
+                errors.append(
+                    f"Event {idx} ({model_id}): event_sha256 '{declared_hash[:16]}...' "
+                    f"does not match computed JCS hash '{computed_hash[:16]}...'"
+                )
 
         # Check event_id uniqueness within this model
         if eid is not None:
             if eid in state["seen_ids"]:
                 errors.append(f"Event {idx} ({model_id}): duplicate event_id '{eid}'")
             state["seen_ids"].add(eid)
+
+        # After verifying the event, store its computed event_sha256 as
+        # the prior_computed_hash reference for the next event in this chain.
+        # This is the core S1-R5: we use the computed hash, not the provided
+        # previous_event_sha256, for chain integrity.
+        if computed_hash is not None:
+            state["prior_computed_hash"] = computed_hash
 
     # No further cross-event checks needed beyond per-event validation;
     # the sequential constraints are enforced iteratively above.
