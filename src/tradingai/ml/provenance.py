@@ -244,9 +244,7 @@ def validate_manifest(manifest: dict[str, Any]) -> list[str]:
     ordered = features.get("ordered", [])
     count = features.get("count", 0)
     if isinstance(ordered, list) and isinstance(count, (int, float)) and len(ordered) != count:
-        errors.append(
-            f"Features count mismatch: len(ordered) ({len(ordered)}) != count ({count})"
-        )
+        errors.append(f"Features count mismatch: len(ordered) ({len(ordered)}) != count ({count})")
 
     errors.extend(validate_calibrator_binding(manifest))
     errors.extend(validate_partition_consistency(manifest))
@@ -254,7 +252,9 @@ def validate_manifest(manifest: dict[str, Any]) -> list[str]:
     return errors
 
 
-def validate_event(event: dict[str, Any], previous_event: dict[str, Any] | None = None) -> list[str]:
+def validate_event(
+    event: dict[str, Any], previous_event: dict[str, Any] | None = None
+) -> list[str]:
     """Validate a lifecycle event. Returns list of errors (empty = valid).
 
     Per S1-R5:
@@ -273,8 +273,13 @@ def validate_event(event: dict[str, Any], previous_event: dict[str, Any] | None 
             errors.append("Invalid event_sha256 format")
 
     required_fields = [
-        "sequence_number", "event_id", "model_id", "event", "at",
-        "actor", "evidence",
+        "sequence_number",
+        "event_id",
+        "model_id",
+        "event",
+        "at",
+        "actor",
+        "evidence",
     ]
     for field in required_fields:
         if field not in event:
@@ -301,11 +306,19 @@ def validate_event(event: dict[str, Any], previous_event: dict[str, Any] | None 
     if "previous_event_sha256" in event and not validate_sha256(event["previous_event_sha256"]):
         errors.append("Invalid previous_event_sha256 format")
 
-    if "event" in event and event["event"] not in ("sealed", "validated", "approved", "deprecated", "revoked"):
+    if "event" in event and event["event"] not in (
+        "sealed",
+        "validated",
+        "approved",
+        "deprecated",
+        "revoked",
+    ):
         errors.append(f"Invalid event type: {event['event']}")
 
     if "sequence_number" in event:
-        if not isinstance(event["sequence_number"], int) or isinstance(event["sequence_number"], bool):
+        if not isinstance(event["sequence_number"], int) or isinstance(
+            event["sequence_number"], bool
+        ):
             errors.append("sequence_number must be an integer")
         elif event["sequence_number"] < 1:
             errors.append("sequence_number must be >= 1")
@@ -442,9 +455,7 @@ def validate_partition_consistency(manifest: dict[str, Any]) -> list[str]:
     horizon = manifest.get("target", {}).get("horizon_bars")
     rows_between = purge.get("rows_between_partitions")
     if horizon is not None and rows_between is not None and rows_between < horizon:
-        errors.append(
-            f"purge.rows_between_partitions ({rows_between}) < horizon_bars ({horizon})"
-        )
+        errors.append(f"purge.rows_between_partitions ({rows_between}) < horizon_bars ({horizon})")
     if purge.get("label_horizon_bars") is not None and horizon is not None:
         if purge.get("label_horizon_bars") != horizon:
             errors.append("purge.label_horizon_bars != target.horizon_bars")
@@ -503,8 +514,7 @@ def validate_event_chain(events: list[dict[str, Any]]) -> list[str]:
 
     for idx, event in enumerate(events):
         # Basic field presence check (event_sha256 handled separately per S1-R5)
-        required = ["sequence_number", "event_id", "model_id",
-                     "event", "at", "actor", "evidence"]
+        required = ["sequence_number", "event_id", "model_id", "event", "at", "actor", "evidence"]
         for field in required:
             if field not in event:
                 errors.append(f"Event {idx}: missing required field '{field}'")
