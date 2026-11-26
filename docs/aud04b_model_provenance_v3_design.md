@@ -1071,7 +1071,7 @@ SHA-256 de los bytes anteriores: se calcula sobre la representacion exacta anter
 
 El loader (o cualquier verificador) debe verificar la cadena de la siguiente manera para cada `model_id`:
 
-1. **Leer todos los eventos** para ese `model_id` del `lifecycle.jsonl`, ordenados por `sequence_number` (que debe ser estrictamente creciente).
+1. **Leer todos los eventos** para ese `model_id` del `lifecycle.jsonl`, conservando el orden físico de inserción en el archivo. No ordenar, reordenar ni reparar eventos automáticamente. Mantener una secuencia independiente para cada `model_id`. Verificar cada evento en el orden en que aparece. Los timestamps son informativos y nunca determinan el orden.
 2. **Verificar el evento 1:**
    - Confirmar que `sequence_number == 1`.
    - Confirmar que `previous_event_sha256 == "0"*64`.
@@ -1262,7 +1262,7 @@ Estos identificadores son distintos y no deben confundirse. `model_id` y `event_
 
 | Acción | Estado `sealed` | Estado `validated` | Estado `approved` | Sin cadena verificable |
 |---|---|---|---|---|
-| Deserializar para `inference` | **No** (solo audit) | **No** (solo con autorización del verificador y anclaje externo) | **No** (sin firma verificada y anclaje) | **No** |
+| Deserializar para `inference` | **No** (solo audit) | **No**. Inferencia nunca permitida para `validated`. | **No** (sin firma verificada y anclaje) | **No** |
 | Deserializar para `evaluation` | **No** (solo audit con integridad) | **Sí** (con informe firmado, cadena verificada y anclaje) | **Sí** (con firma válida y cadena verificada) | **No** |
 | Cargar metadata (`audit`) | **Sí** (hashes OK) | **Sí** (hashes OK) | **Sí** (hashes + firma OK) | **No** (cadena rota) |
 | Firmar aprobación pendiente | N/A | N/A | Requiere clave Ed25519 + evento en registro | N/A |
