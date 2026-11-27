@@ -284,13 +284,34 @@ class TestValidators:
         assert not validate_model_id(17)
         assert not validate_model_id(None)
 
+    def test_model_id_reference_schemas_match_python_validator(self):
+        model_id_schema = MANIFEST_SCHEMA["properties"]["model_id"]
+        base_model_id_schema = MANIFEST_SCHEMA["properties"]["calibration"][
+            "properties"
+        ]["base_model_id"]
+        assert model_id_schema["pattern"] == base_model_id_schema["pattern"]
+
+        from jsonschema import Draft202012Validator
+
+        candidates = [
+            ("mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W", True),
+            ("mdl_71JQ8Z3K4M5N6P7Q8R9S0T1V2W", True),
+            ("mdl_81JQ8Z3K4M5N6P7Q8R9S0T1V2W", False),
+            ("mdl_91JQ8Z3K4M5N6P7Q8R9S0T1V2W", False),
+            ("mdl_A1JQ8Z3K4M5N6P7Q8R9S0T1V2W", False),
+        ]
+        for model_id, expected in candidates:
+            assert validate_model_id(model_id) is expected
+            assert Draft202012Validator(model_id_schema).is_valid(model_id) is expected
+            assert Draft202012Validator(base_model_id_schema).is_valid(model_id) is expected
+
     def test_validate_event_id_valid(self):
         assert validate_event_id("evt_01JQ8Z4A1B2C3D4E5F6G7H8J9K")
 
     def test_validate_event_id_starts_with_0_or_7(self):
         # ULID first character must be 0-7 per 128-bit range
         assert validate_event_id("evt_01JQ8Z4A1B2C3D4E5F6G7H8J9K")
-        assert validate_event_id("evt_01JQ8Z4A1B2C3D4E5F6G7H8J9M")
+        assert validate_event_id("evt_71JQ8Z4A1B2C3D4E5F6G7H8J9M")
 
     def test_validate_event_id_starts_with_8_rejected(self):
         # ULID starting with 8 exceeds 128-bit range

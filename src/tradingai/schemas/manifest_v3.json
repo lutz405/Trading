@@ -786,7 +786,8 @@
           ]
         },
         "base_model_id": {
-          "type": "string"
+          "type": "string",
+          "pattern": "^mdl_[0-7][0-9A-HJKMNP-TV-Z]{25}$"
         },
         "base_artifact_sha256": {
           "type": "object",
