@@ -1,6 +1,14 @@
 # R13-APPROVAL-4.0.0-R1 — Registro formal de decisiones normativas
 
-**Estado del registro:** propuesta documental para decisión humana. No aprueba la especificación 4.0.0, no implementa R13 y no modifica el comportamiento de S1.
+**Estado del registro:** **APPROVED** — aprobación normativa humana explícita de DEC-01 a DEC-08 para provenance 4.0.0. No implementa R13 ni modifica el comportamiento de S1.
+
+**Revisión de aprobación:** R13-APPROVAL-4.0.0-R2.
+
+**Autoridad de aprobación:** aprobación humana explícita del responsable del proyecto. No se registra nombre, firma criptográfica, identidad autenticada ni credenciales.
+
+**Fecha de aprobación:** 2026-11-27.
+
+**Versión aprobada:** provenance 4.0.0.
 
 **Base conocida:** commit remoto **764f11dea72c862a33e27a3019b426e0ecc8bb21**.
 
@@ -11,39 +19,41 @@
 - **docs/aud04b_model_provenance_v4_design.md**, especificación propuesta de 4.0.0.
 - R13-DESIGN-R3.2, R13-DOCUMENTATION-R1 y R13-DOCUMENTATION-R1.1.
 
-## 1. Propósito y reglas de estado
+## 1. Propósito, alcance y reglas de estado
 
-Este registro hace explícitas las decisiones que la especificación 4.0.0 deja pendientes. Es una fuente de trazabilidad del proceso de aprobación; no sustituye a la especificación técnica ni cambia el contrato 3.0.0.
+Este registro conserva la trazabilidad de las decisiones de provenance 4.0.0 y registra su aprobación normativa. No cambia el contrato histórico 3.0.0, no implementa requisitos y no autoriza inferencia, loaders, registry, writer, deserialización ni S2.
+
+R13-APPROVAL-4.0.0-R2 modifica exclusivamente el estado de DEC-01 a DEC-08. Las etiquetas de propuesta y pendiente que permanecen en el documento de especificación 4.0.0 se conservan como historial documental por el límite de alcance de esta revisión; para el estado de aprobación de estas ocho decisiones, este registro R2 es la fuente de verdad.
 
 | Estado | Significado |
 |---|---|
-| **PROPUESTA PARA APROBACIÓN** | La decisión está definida para revisión humana, pero no está aprobada ni implementada. |
-| **APROBADA** | Estado reservado para una decisión humana posterior y explícita. |
+| **PROPUESTA PARA APROBACIÓN** | Estado histórico de una decisión antes de la aprobación humana explícita. |
+| **APPROVED** | Decisión normativa aprobada por la autoridad indicada arriba; no implica implementación. |
 | **RECHAZADA** | Estado reservado para una decisión humana posterior y explícita. |
-| **APLAZADA** | Tema fuera de 4.0.0 inicial que no puede implementarse ni aceptarse sin un cambio de contrato posterior. |
+| **APLAZADA** | Tema fuera de 4.0.0 inicial que requiere un cambio de contrato posterior. |
 
-En este registro no hay decisiones **APROBADAS** ni **RECHAZADAS**. Ninguna mención de una propuesta se interpreta como autorización para modificar schema, código, tests, fixtures, loaders, registry, writer, inferencia o S2.
+DEC-01 a DEC-08 están **APPROVED**. Ninguna de esas aprobaciones es autorización para modificar schema, código, tests, fixtures, loaders, registry, writer, inferencia o S2.
 
 ## 2. Matriz de decisiones
 
 | ID | Decisión | Estado | Especificación 4.0.0 | Impacto en schema futuro | Impacto en implementación futura | Pruebas futuras |
 |---|---|---|---|---|---|---|
-| DEC-01 | reason_code sin catálogo cerrado inicial | PROPUESTA PARA APROBACIÓN | §7.3 | Patrón ASCII y campos de evidence por evento | Validación sintáctica; sin enum implícito | V4-U08 y casos de patrón válido/inválido |
-| DEC-02 | actor con namespace explícito | PROPUESTA PARA APROBACIÓN | §7.2 | Patrón de identificador; no proveedor de identidad | Validación de formato solamente | V4-U08 y casos de namespace |
-| DEC-03 | extensions vacío en 4.0.0 inicial | PROPUESTA PARA APROBACIÓN | §§9.2–9.3 | extensions constante como objeto vacío | Rechazo de extensiones no vacías | V4-U13 |
-| DEC-04 | calibration únicamente compartida con validation | PROPUESTA PARA APROBACIÓN | §6 | shared_with y fit_partition restringidos | Validación de equivalencia; sin frontera artificial | V4-U04 |
-| DEC-05 | contratos 3.0.0 y 4.0.0 separados | PROPUESTA PARA APROBACIÓN | §3 | Esquema 4.0.0 independiente | Dispatch explícito por schema_version | V4-U01 |
-| DEC-06 | run_fingerprint con allowlist normativa | PROPUESTA PARA APROBACIÓN | §9 | Rutas incluidas, opcionales y anulables definidas | Construcción de preimagen reproducible | V4-U10, V4-U11 y vectores dorados completos |
-| DEC-07 | eventos de nueve campos y sidecar Ed25519 | PROPUESTA PARA APROBACIÓN | §§7–8 | Contratos de evento, evidence y sidecar | Cadena estructural; asociación de sidecar; sin confianza criptográfica S1 | V4-U07, V4-U08, V4-U09 y V4-U11 |
-| DEC-08 | posiciones fuente y purga por fuente | PROPUESTA PARA APROBACIÓN | §§4–5 | Límites fuente y reglas de partición | Validación estructural; verificador de datos posterior separado | V4-U02, V4-U03, V4-U14 y V4-U15 |
+| DEC-01 | reason_code sin catálogo cerrado inicial | APPROVED | §7.3 | Patrón ASCII y campos de evidence por evento | Validación sintáctica; sin enum implícito | V4-U08 y casos de patrón válido/inválido |
+| DEC-02 | actor con namespace explícito | APPROVED | §7.2 | Patrón de identificador; no proveedor de identidad | Validación de formato solamente | V4-U08 y casos de namespace |
+| DEC-03 | extensions vacío en 4.0.0 inicial | APPROVED | §§9.2–9.3 | extensions constante como objeto vacío | Rechazo de extensiones no vacías | V4-U13 |
+| DEC-04 | calibration únicamente compartida con validation | APPROVED | §6 | shared_with y fit_partition restringidos | Validación de equivalencia; sin frontera artificial | V4-U04 |
+| DEC-05 | contratos 3.0.0 y 4.0.0 separados | APPROVED | §3 | Esquema 4.0.0 independiente | Dispatch explícito por schema_version | V4-U01 |
+| DEC-06 | run_fingerprint con allowlist normativa | APPROVED | §9 | Rutas incluidas, opcionales y anulables definidas | Construcción de preimagen reproducible | V4-U10, V4-U11 y vectores dorados completos |
+| DEC-07 | eventos de nueve campos y sidecar Ed25519 | APPROVED | §§7–8 | Contratos de evento, evidence y sidecar | Cadena estructural; asociación de sidecar; sin confianza criptográfica S1 | V4-U07, V4-U08, V4-U09 y V4-U11 |
+| DEC-08 | posiciones fuente y purga por fuente | APPROVED | §§4–5 | Límites fuente y reglas de partición | Validación estructural; verificador de datos posterior separado | V4-U02, V4-U03, V4-U14 y V4-U15 |
 
-## 3. Decisiones propuestas
+## 3. Decisiones aprobadas
 
 ### DEC-01 — reason_code
 
-**Estado:** PROPUESTA PARA APROBACIÓN.
+**Estado:** APPROVED.
 
-**Decisión propuesta:** reason_code es una cadena ASCII que cumple el patrón **^[a-z][a-z0-9_]{0,63}$**. La primera versión 4.0.0 no define un catálogo cerrado. Un catálogo versionado futuro requerirá un cambio explícito de contrato.
+**Decisión aprobada:** reason_code es una cadena ASCII que cumple el patrón **^[a-z][a-z0-9_]{0,63}$**. La primera versión 4.0.0 no define un catálogo cerrado. Un catálogo versionado futuro requerirá un cambio explícito de contrato.
 
 **Justificación:** la especificación propuesta necesita distinguir la validez sintáctica de la política semántica. Un enum no documentado convertiría una decisión pendiente en una restricción implícita.
 
@@ -53,9 +63,9 @@ En este registro no hay decisiones **APROBADAS** ni **RECHAZADAS**. Ninguna menc
 
 ### DEC-02 — actor
 
-**Estado:** PROPUESTA PARA APROBACIÓN.
+**Estado:** APPROVED.
 
-**Decisión propuesta:** actor usa exactamente uno de los prefijos **human:** o **service:** seguido de un identificador ASCII local. El patrón propuesto es **^(human|service):[A-Za-z0-9][A-Za-z0-9._-]{0,119}$**. Los prefijos distinguen el tipo declarado de actor, sin elegir un proveedor de identidad ni un sistema de autenticación.
+**Decisión aprobada:** actor usa exactamente uno de los prefijos **human:** o **service:** seguido de un identificador ASCII local. El patrón aprobado es **^(human|service):[A-Za-z0-9][A-Za-z0-9._-]{0,119}$**. Los prefijos distinguen el tipo declarado de actor, sin elegir un proveedor de identidad ni un sistema de autenticación.
 
 **Justificación:** el texto de actor debe ser trazable y no ambiguo, sin confundir una etiqueta declarada con una identidad autenticada.
 
@@ -65,9 +75,9 @@ En este registro no hay decisiones **APROBADAS** ni **RECHAZADAS**. Ninguna menc
 
 ### DEC-03 — extensions
 
-**Estado:** PROPUESTA PARA APROBACIÓN.
+**Estado:** APPROVED.
 
-**Decisión propuesta:** 4.0.0 inicial exige **extensions = {}**. No se aceptan extensiones no vacías hasta definir namespaces registrados, schemas, límites de tamaño y una política de estabilidad y sensibilidad. Las extensiones futuras requieren cambio explícito de contrato.
+**Decisión aprobada:** 4.0.0 inicial exige **extensions = {}**. No se aceptan extensiones no vacías hasta definir namespaces registrados, schemas, límites de tamaño y una política de estabilidad y sensibilidad. Las extensiones futuras requieren cambio explícito de contrato.
 
 **Justificación:** el objeto abierto genérico no permite demostrar que los valores sean no sensibles, estables y no conductuales. Aceptarlo debilitaría la reproducibilidad y permitiría configuración relevante fuera de las rutas tipadas.
 
@@ -77,9 +87,9 @@ En este registro no hay decisiones **APROBADAS** ni **RECHAZADAS**. Ninguna menc
 
 ### DEC-04 — calibración compartida
 
-**Estado:** PROPUESTA PARA APROBACIÓN.
+**Estado:** APPROVED.
 
-**Decisión propuesta:** 4.0.0 inicial admite únicamente calibration compartida exactamente con validation. calibration.fit_partition vale **validation** y validation.partitions.calibration.shared_with vale **validation**. Calibration independiente queda aplazada.
+**Decisión aprobada:** 4.0.0 inicial admite únicamente calibration compartida exactamente con validation. calibration.fit_partition vale **validation** y validation.partitions.calibration.shared_with vale **validation**. Calibration independiente queda aplazada.
 
 **Justificación:** la modalidad compartida tiene una representación completa y evita crear una frontera cronológica ficticia entre validation y calibration. La modalidad independiente necesita una definición aprobada de partición, fit_partition, orden temporal, purga, embargo y relaciones de hash.
 
@@ -89,9 +99,9 @@ En este registro no hay decisiones **APROBADAS** ni **RECHAZADAS**. Ninguna menc
 
 ### DEC-05 — versionado
 
-**Estado:** PROPUESTA PARA APROBACIÓN.
+**Estado:** APPROVED.
 
-**Decisión propuesta:** 3.0.0 permanece congelado; 4.0.0 es un contrato y schema independientes. El validador público conserva su interfaz y selecciona reglas mediante schema_version. No hay conversión implícita ni aplicación de defaults para migrar manifiestos.
+**Decisión aprobada:** 3.0.0 permanece congelado; 4.0.0 es un contrato y schema independientes. El validador público conserva su interfaz y selecciona reglas mediante schema_version. No hay conversión implícita ni aplicación de defaults para migrar manifiestos.
 
 **Justificación:** los nuevos límites de posición fuente, reglas de calibration, evidence y fingerprint son incompatibles con la validez histórica de 3.0.0. Reinterpretar manifiestos existentes rompería su reproducibilidad.
 
@@ -101,9 +111,9 @@ En este registro no hay decisiones **APROBADAS** ni **RECHAZADAS**. Ninguna menc
 
 ### DEC-06 — run_fingerprint
 
-**Estado:** PROPUESTA PARA APROBACIÓN.
+**Estado:** APPROVED.
 
-**Decisión propuesta:** run_fingerprint se calcula sobre la allowlist normativa de §9.2. La preimagen conserva presencia frente a null, incluye configuración efectiva y excluye identificadores de salida, timestamps, artefactos, métricas y hashes derivados. Se canonicaliza con JCS y se hashea con SHA-256.
+**Decisión aprobada:** run_fingerprint se calcula sobre la allowlist normativa de §9.2. La preimagen conserva presencia frente a null, incluye configuración efectiva y excluye identificadores de salida, timestamps, artefactos, métricas y hashes derivados. Se canonicaliza con JCS y se hashea con SHA-256.
 
 **Justificación:** una proyección explícita evita que cambios incidentales o resultados derivados modifiquen la identidad de intención del run, y evita omitir configuración semánticamente relevante.
 
@@ -113,9 +123,9 @@ En este registro no hay decisiones **APROBADAS** ni **RECHAZADAS**. Ninguna menc
 
 ### DEC-07 — eventos y firmas
 
-**Estado:** PROPUESTA PARA APROBACIÓN.
+**Estado:** APPROVED.
 
-**Decisión propuesta:** el payload canónico contiene nueve campos: sequence_number, event_id, model_id, event, at, actor, evidence, manifest_sha256 y previous_event_sha256. El evento almacenado añade event_sha256 como décimo campo. El sidecar es un objeto independiente. Ed25519 firma los bytes JCS UTF-8, sin BOM ni salto final, del payload de nueve campos.
+**Decisión aprobada:** el payload canónico contiene nueve campos: sequence_number, event_id, model_id, event, at, actor, evidence, manifest_sha256 y previous_event_sha256. El evento almacenado añade event_sha256 como décimo campo. El sidecar es un objeto independiente. Ed25519 firma los bytes JCS UTF-8, sin BOM ni salto final, del payload de nueve campos.
 
 **Justificación:** esta separación elimina la circularidad entre firma y event_sha256 y diferencia la cadena de integridad de la autenticidad criptográfica.
 
@@ -125,9 +135,9 @@ En este registro no hay decisiones **APROBADAS** ni **RECHAZADAS**. Ninguna menc
 
 ### DEC-08 — posiciones fuente y purga
 
-**Estado:** PROPUESTA PARA APROBACIÓN.
+**Estado:** APPROVED.
 
-**Decisión propuesta:** source_position es el ordinal de la fila en la serie OHLCV original antes del filtrado. Las posiciones por secuencia son enteros no negativos, estrictamente crecientes y únicos. Los límites son semiabiertos; source_position_start coincide con la primera posición conservada y source_position_end con la última más uno. La purga se comprueba con **gap_source(A,B) >= max(H,E)**.
+**Decisión aprobada:** source_position es el ordinal de la fila en la serie OHLCV original antes del filtrado. Las posiciones por secuencia son enteros no negativos, estrictamente crecientes y únicos. Los límites son semiabiertos; source_position_start coincide con la primera posición conservada y source_position_end con la última más uno. La purga se comprueba con **gap_source(A,B) >= max(H,E)**.
 
 **Justificación:** las filas filtradas y las posiciones de la serie fuente son coordenadas distintas. La condición usa la coordenada en la que se mide horizon_bars y evita sumar dos veces embargo y horizonte.
 
@@ -139,7 +149,18 @@ En este registro no hay decisiones **APROBADAS** ni **RECHAZADAS**. Ninguna menc
 
 ### Aprobadas
 
-Ninguna. Este documento no registra aprobación humana de DEC-01 a DEC-08.
+La autoridad indicada en el encabezado aprueba normativamente las siguientes decisiones para provenance 4.0.0:
+
+| ID | Decisión aprobada | Estado |
+|---|---|---|
+| DEC-01 | reason_code sin catálogo cerrado inicial | APPROVED |
+| DEC-02 | actor con namespace human: o service: | APPROVED |
+| DEC-03 | extensions = {} en 4.0.0 inicial | APPROVED |
+| DEC-04 | calibration compartida con validation | APPROVED |
+| DEC-05 | versionado independiente 3.0.0 y 4.0.0 | APPROVED |
+| DEC-06 | allowlist normativa de run_fingerprint | APPROVED |
+| DEC-07 | payload de nueve campos, evento de diez campos y sidecar Ed25519 | APPROVED |
+| DEC-08 | posiciones fuente y purga por fuente | APPROVED |
 
 ### Rechazadas
 
@@ -157,16 +178,16 @@ Ninguna. No se ha presentado una decisión humana de rechazo.
 
 ## 5. Conflictos y consistencia
 
-No se detectó un conflicto normativo entre DEC-01 a DEC-08 y la especificación propuesta 4.0.0. Las decisiones concretan los puntos que la especificación marca como pendientes, sin alterar el contrato histórico 3.0.0.
+No se detectó un conflicto normativo entre DEC-01 a DEC-08 y el contenido técnico de la especificación 4.0.0. Las decisiones concretan los puntos que la especificación marcaba como pendientes, sin alterar el contrato histórico 3.0.0. Por el límite de alcance de R2, el documento de especificación conserva sus etiquetas históricas de propuesta; su estado de aprobación para estas ocho decisiones queda registrado en §1 de este documento.
 
 Hay dos límites deliberados que deben mantenerse visibles:
 
 - DEC-02 propone una sintaxis de namespace, pero no una identidad verificada ni un proveedor; no se debe implementar autenticación por inferencia.
 - DEC-08 permite validación estructural en S1, pero no afirma validación efectiva contra datos originales sin que un verificador posterior recalcule la secuencia y sus hashes.
 
-## 6. Criterios para una aprobación humana posterior
+## 6. Criterios normativos mantenidos y cambios posteriores
 
-Una aprobación válida de cada DEC debe identificar el ID, el texto de la decisión aceptada, la versión documental resultante y cualquier excepción. La aprobación no autoriza por sí sola R13-IMPLEMENTATION, modificaciones de schema o código, ni el inicio de S2; dichas acciones requieren autorización separada.
+Todo cambio posterior a una DEC aprobada debe identificar el ID afectado, el texto reemplazado, la versión documental resultante y cualquier excepción. Esta aprobación normativa no autoriza por sí sola R13-IMPLEMENTATION, modificaciones de schema o código, ni el inicio de S2; dichas acciones requieren autorización separada.
 
 Antes de implementar, la especificación aprobada debe mantener:
 
