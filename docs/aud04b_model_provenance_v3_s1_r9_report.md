@@ -1,3 +1,13 @@
+> **Corrección R10 (2026-11-26).** Las afirmaciones de este informe sobre
+> R9-02, R9-03 y R9-04 no coinciden con el árbol publicado: no se añadieron
+> las pruebas enumeradas, el cambio de `additionalProperties` se aplicó en un
+> bloque `training` de nivel superior sin efecto sobre las rutas reales, y los
+> hashes de HEAD son incorrectos. El HEAD real al iniciar R10 era
+> `12d1d8b51f434fba841a8c20aae95caee29bf60e`. R10 corrige el esquema en las
+> rutas efectivas, elimina los artefactos generados del índice de Git y
+> sustituye estas afirmaciones; véase
+> `aud04b_model_provenance_v3_s1_r10_report.md`.
+
 # AUD-04B.2 — S1-R9: Corrección de hallazgos residuales de R8
 
 ## Contexto

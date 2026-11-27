@@ -20,8 +20,12 @@ dist/
 .env
 .env.local
 
-# Generated report
-docs/aud04b_model_provenance_v3_s1_r8_report.md
+# Local one-off analysis scripts and outputs
+/analyze.py
+/compute_hash.py
+/compute_hash2.py
+/fix2.py
+/unicode_result.txt
 
 # Temporary scripts
 *.py.tmp

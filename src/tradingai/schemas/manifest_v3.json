@@ -394,7 +394,36 @@
                   "type": "string"
                 },
                 "params": {
-                  "type": "object"
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "n_estimators": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "max_depth": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "minimum": 1
+                    },
+                    "class_weight": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "random_state": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "n_jobs": {
+                      "type": "integer"
+                    }
+                  }
                 }
               }
             },
@@ -415,7 +444,54 @@
                   "type": "string"
                 },
                 "params": {
-                  "type": "object"
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "n_estimators": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "max_depth": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "learning_rate": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    },
+                    "subsample": {
+                      "type": "number",
+                      "exclusiveMinimum": 0,
+                      "maximum": 1
+                    },
+                    "colsample_bytree": {
+                      "type": "number",
+                      "exclusiveMinimum": 0,
+                      "maximum": 1
+                    },
+                    "random_state": {
+                      "type": "integer"
+                    },
+                    "tree_method": {
+                      "type": "string"
+                    },
+                    "device": {
+                      "type": "string"
+                    },
+                    "objective": {
+                      "type": "string"
+                    },
+                    "num_class": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "eval_metric": {
+                      "type": "string"
+                    },
+                    "n_jobs": {
+                      "type": "integer"
+                    }
+                  }
                 }
               }
             }
@@ -899,27 +975,6 @@
             "string",
             "null"
           ]
-        }
-      }
-    }
-  },
-  "training": {
-    "models": {
-      "rf": {
-        "params": {
-          "type": "object",
-          "additionalProperties": false
-        },
-        "xgb": {
-          "params": {
-            "type": "object",
-            "additionalProperties": false
-          }
-        }
-      },
-      "xgb": {
-        "params": {
-          "additionalProperties": false
         }
       }
     }

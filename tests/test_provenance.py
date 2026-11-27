@@ -26,6 +26,30 @@ from tradingai.ml.provenance import (
     verify_event_hash,
 )
 
+MODEL_ID_A = "mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W"
+MODEL_ID_B = "mdl_02JQ8Z3K4M5N6P7Q8R9S0T1V2X"
+EVENT_ID_A = "evt_01JQ8Z4A1B2C3D4E5F6G7H8J9K"
+EVENT_ID_B = "evt_01JQ8Z4A1B2C3D4E5F6G7H8J9M"
+EVENT_ID_C = "evt_01JQ8Z4A1B2C3D4E5F6G7H8J9N"
+EVENT_ID_D = "evt_01JQ8Z4A1B2C3D4E5F6G7H8J9P"
+EVENT_ID_E = "evt_01JQ8Z4A1B2C3D4E5F6G7H8J9Q"
+
+
+def make_event(sequence, model_id, event_id, event_type, at, previous="0" * 64):
+    """Build a self-consistent event with a valid JCS event_sha256."""
+    event = {
+        "sequence_number": sequence,
+        "previous_event_sha256": previous,
+        "event_id": event_id,
+        "model_id": model_id,
+        "event": event_type,
+        "at": at,
+        "actor": "pipeline",
+        "evidence": None,
+    }
+    event["event_sha256"] = sha256_canonical(event)
+    return event
+
 
 # ---------------------------------------------------------------------------
 # JCS Canonicalization Tests
@@ -1001,6 +1025,194 @@ class TestEventValidation:
         assert not verify_event_hash(event, "wrong" * 8)
 
 
+class TestEventValidationHardening:
+    """R10-02: malformed inputs must produce errors, never tracebacks."""
+
+    def test_validate_event_rejects_non_object(self):
+        for value in (None, [], "event", 42):
+            assert validate_event(value) == ["Event must be a JSON object"]
+
+    def test_validate_event_non_string_fields_are_controlled(self):
+        event = make_event(1, MODEL_ID_A, EVENT_ID_A, "sealed", "2026-11-25T10:00:00Z")
+        event["event_id"] = ["not", "a", "string"]
+        event["model_id"] = 17
+        event["previous_event_sha256"] = 0
+        event["event_sha256"] = 0
+        errors = validate_event(event)
+        assert any("event_id" in e for e in errors)
+        assert any("model_id" in e for e in errors)
+        assert any("previous_event_sha256" in e for e in errors)
+        assert any("event_sha256" in e for e in errors)
+
+    def test_validate_event_non_dict_previous_event_is_controlled(self):
+        event = make_event(
+            2, MODEL_ID_A, EVENT_ID_B, "validated", "2026-11-25T11:00:00Z", previous="a" * 64
+        )
+        errors = validate_event(event, previous_event=["not", "a", "dict"])
+        assert any("previous_event must be a JSON object" in e for e in errors)
+
+    def test_event_with_manifest_sha256_is_allowed(self):
+        event = make_event(1, MODEL_ID_A, EVENT_ID_A, "sealed", "2026-11-25T10:00:00Z")
+        event["manifest_sha256"] = "e" * 64
+        event["event_sha256"] = sha256_canonical(
+            {k: v for k, v in event.items() if k != "event_sha256"}
+        )
+        assert validate_event(event) == []
+        assert validate_event_chain([event]) == []
+
+    def test_event_invalid_manifest_sha256_is_rejected(self):
+        event = make_event(1, MODEL_ID_A, EVENT_ID_A, "sealed", "2026-11-25T10:00:00Z")
+        event["manifest_sha256"] = "not-a-hash"
+        errors = validate_event(event)
+        assert any("manifest_sha256" in e for e in errors)
+        assert not any("unknown field" in e.lower() for e in errors)
+
+    def test_event_actor_and_evidence_types_are_checked(self):
+        event = make_event(1, MODEL_ID_A, EVENT_ID_A, "sealed", "2026-11-25T10:00:00Z")
+        event["actor"] = 42
+        event["evidence"] = ["not", "an", "object"]
+        errors = validate_event(event)
+        assert any("actor must be a string" in e for e in errors)
+        assert any("evidence must be an object" in e for e in errors)
+
+    def test_validate_event_invalid_previous_sequence_is_controlled(self):
+        event = make_event(
+            2, MODEL_ID_A, EVENT_ID_B, "validated", "2026-11-25T11:00:00Z", previous="a" * 64
+        )
+        for bad_sequence in ("1", True, None, 1.5):
+            errors = validate_event(event, previous_event={"sequence_number": bad_sequence})
+            assert any("previous_event has invalid sequence_number" in e for e in errors)
+
+    def test_event_chain_rejects_non_list(self):
+        assert validate_event_chain(None) == ["Event chain must be a list of events"]
+        assert validate_event_chain({"sequence_number": 1}) == [
+            "Event chain must be a list of events"
+        ]
+
+    def test_event_chain_rejects_non_object_entries(self):
+        errors = validate_event_chain([None, "event", 42])
+        assert len(errors) == 3
+        assert all("event must be a JSON object" in e for e in errors)
+
+    def test_event_chain_unhashable_identifiers_are_controlled(self):
+        event = make_event(1, MODEL_ID_A, EVENT_ID_A, "sealed", "2026-11-25T10:00:00Z")
+        event["model_id"] = ["unhashable"]
+        event["event_id"] = {"unhashable": True}
+        errors = validate_event_chain([event])
+        assert any("model_id" in e for e in errors)
+        assert any("event_id" in e for e in errors)
+
+    def test_event_chain_non_string_declared_hash_is_controlled(self):
+        event = make_event(1, MODEL_ID_A, EVENT_ID_A, "sealed", "2026-11-25T10:00:00Z")
+        event["event_sha256"] = 123
+        errors = validate_event_chain([event])
+        assert any("event_sha256" in e for e in errors)
+
+    def test_event_chain_impossible_timestamp_is_rejected(self):
+        event = make_event(1, MODEL_ID_A, EVENT_ID_A, "sealed", "2026-02-30T10:00:00Z")
+        errors = validate_event_chain([event])
+        assert any("at format" in e for e in errors)
+
+    def test_event_chain_bad_hash_characters_are_rejected(self):
+        event = make_event(1, MODEL_ID_A, EVENT_ID_A, "sealed", "2026-11-25T10:00:00Z")
+        event["event_sha256"] = "G" * 64
+        errors = validate_event_chain([event])
+        assert any("event_sha256" in e for e in errors)
+
+    def test_event_chain_unknown_field_is_rejected(self):
+        event = make_event(1, MODEL_ID_A, EVENT_ID_A, "sealed", "2026-11-25T10:00:00Z")
+        event["extra"] = "not allowed"
+        event["event_sha256"] = sha256_canonical(
+            {k: v for k, v in event.items() if k != "event_sha256"}
+        )
+        errors = validate_event_chain([event])
+        assert any("unknown field" in e.lower() for e in errors)
+
+    def test_event_chain_missing_field_is_rejected(self):
+        event = make_event(1, MODEL_ID_A, EVENT_ID_A, "sealed", "2026-11-25T10:00:00Z")
+        del event["actor"]
+        event["event_sha256"] = sha256_canonical(
+            {k: v for k, v in event.items() if k != "event_sha256"}
+        )
+        errors = validate_event_chain([event])
+        assert any("missing required field" in e.lower() for e in errors)
+
+    def test_event_chain_valid_three_event_chain(self):
+        first = make_event(1, MODEL_ID_A, EVENT_ID_A, "sealed", "2026-11-25T10:00:00Z")
+        second = make_event(
+            2,
+            MODEL_ID_A,
+            EVENT_ID_B,
+            "validated",
+            "2026-11-25T11:00:00Z",
+            previous=first["event_sha256"],
+        )
+        third = make_event(
+            3,
+            MODEL_ID_A,
+            EVENT_ID_C,
+            "approved",
+            "2026-11-25T12:00:00Z",
+            previous=second["event_sha256"],
+        )
+        assert validate_event_chain([first, second, third]) == []
+
+    def test_event_chain_wrong_previous_hash_is_rejected(self):
+        first = make_event(1, MODEL_ID_A, EVENT_ID_A, "sealed", "2026-11-25T10:00:00Z")
+        second = make_event(
+            2,
+            MODEL_ID_A,
+            EVENT_ID_B,
+            "validated",
+            "2026-11-25T11:00:00Z",
+            previous="b" * 64,
+        )
+        errors = validate_event_chain([first, second])
+        assert any("previous_event_sha256" in e for e in errors)
+
+    def test_event_chain_tampered_intermediate_event_is_rejected(self):
+        first = make_event(1, MODEL_ID_A, EVENT_ID_A, "sealed", "2026-11-25T10:00:00Z")
+        second = make_event(
+            2,
+            MODEL_ID_A,
+            EVENT_ID_B,
+            "validated",
+            "2026-11-25T11:00:00Z",
+            previous=first["event_sha256"],
+        )
+        third = make_event(
+            3,
+            MODEL_ID_A,
+            EVENT_ID_C,
+            "approved",
+            "2026-11-25T12:00:00Z",
+            previous=second["event_sha256"],
+        )
+        second["actor"] = "tampered"
+        errors = validate_event_chain([first, second, third])
+        assert any("event_sha256" in e for e in errors)
+        assert any("previous_event_sha256" in e for e in errors)
+
+    def test_event_chain_does_not_sort_physical_order(self):
+        first = make_event(1, MODEL_ID_A, EVENT_ID_A, "sealed", "2026-11-25T10:00:00Z")
+        second = make_event(
+            2,
+            MODEL_ID_A,
+            EVENT_ID_B,
+            "validated",
+            "2026-11-25T11:00:00Z",
+            previous=first["event_sha256"],
+        )
+        errors = validate_event_chain([second, first])
+        assert any("first event" in e for e in errors)
+
+    def test_event_chain_recursive_payload_is_controlled(self):
+        event = make_event(1, MODEL_ID_A, EVENT_ID_A, "sealed", "2026-11-25T10:00:00Z")
+        event["evidence"] = event
+        errors = validate_event_chain([event])
+        assert any("error computing JCS hash" in e for e in errors)
+
+
 # ---------------------------------------------------------------------------
 # Schema Validation Tests
 # ---------------------------------------------------------------------------
@@ -1020,6 +1232,61 @@ class TestSchemaValidation:
         errors = validate_schema(manifest)
         assert len(errors) > 0
         assert any("required" in e.lower() or "schema_version" in e for e in errors)
+
+    def test_schema_has_no_orphan_training_block(self):
+        # R10: the ineffective top-level "training" keyword from R9 is gone.
+        assert "training" not in MANIFEST_SCHEMA
+
+    def test_rf_params_are_closed(self):
+        import jsonschema
+
+        models = MANIFEST_SCHEMA["properties"]["training"]["properties"]["models"]
+        schema = models["properties"]["rf"]["properties"]["params"]
+        assert schema.get("additionalProperties") is False
+        validator = jsonschema.Draft202012Validator(schema)
+        assert validator.is_valid(
+            {
+                "n_estimators": 200,
+                "max_depth": 8,
+                "class_weight": "balanced",
+                "random_state": 42,
+                "n_jobs": 1,
+            }
+        )
+        assert not validator.is_valid({"n_estimators": 200, "unknown_param": 1})
+
+    def test_xgb_params_are_closed(self):
+        import jsonschema
+
+        models = MANIFEST_SCHEMA["properties"]["training"]["properties"]["models"]
+        schema = models["properties"]["xgb"]["properties"]["params"]
+        assert schema.get("additionalProperties") is False
+        validator = jsonschema.Draft202012Validator(schema)
+        assert validator.is_valid(
+            {
+                "n_estimators": 200,
+                "max_depth": 6,
+                "learning_rate": 0.05,
+                "subsample": 0.8,
+                "colsample_bytree": 0.8,
+                "random_state": 42,
+                "tree_method": "hist",
+                "device": "cpu",
+                "objective": "multi:softprob",
+                "num_class": 3,
+                "eval_metric": "mlogloss",
+                "n_jobs": 1,
+            }
+        )
+        assert not validator.is_valid({"n_estimators": 200, "unknown_param": 1})
+
+    def test_decimal_string_field_rejects_number(self):
+        import jsonschema
+
+        schema = MANIFEST_SCHEMA["properties"]["target"]["properties"]["vol_mult"]
+        validator = jsonschema.Draft202012Validator(schema)
+        assert validator.is_valid("0.5")
+        assert not validator.is_valid(0.5)
 
 
 # ---------------------------------------------------------------------------
@@ -1200,6 +1467,33 @@ class TestJCSVectors:
         except (ValueError, OverflowError):
             pass  # Expected per R8-02
 
+    # ----- R10-06: delegación rfc8785, UTF-8 y recursión -----
+
+    def test_jcs_delegates_to_rfc8785(self):
+        """jcs_canonical_bytes must be exactly rfc8785.dumps output."""
+        import rfc8785
+
+        obj = {"b": 1e-7, "a": [1e20, -0.0]}
+        assert jcs_canonical_bytes(obj) == rfc8785.dumps(obj)
+        assert jcs_canonicalize(obj) == rfc8785.dumps(obj).decode("utf-8")
+
+    def test_jcs_utf8_encoding_without_bom(self):
+        """Canonical bytes are UTF-8, without BOM or trailing newline."""
+        data = jcs_canonical_bytes({"k": "áéíóú€\U00010000"})
+        assert not data.startswith(b"\xef\xbb\xbf")
+        assert not data.endswith(b"\n")
+        assert data.decode("utf-8") == '{"k":"áéíóú€\U00010000"}'
+
+    def test_jcs_deeply_nested_recursion(self):
+        """Deeply nested objects are canonicalized without truncation."""
+        obj = {"leaf": 1}
+        for _ in range(100):
+            obj = {"node": obj}
+        result = jcs_canonicalize(obj)
+        assert result.startswith('{"node":{"node":')
+        assert '"leaf":1' in result
+        assert result.count('"node"') == 100
+
 
 # ---------------------------------------------------------------------------
 # Event Chain Validation Tests
@@ -1230,7 +1524,7 @@ class TestEventChainValidation:
                 # previous_event_sha256 must match the computed event_sha256 of
                 # the first event (the JCS hash excluding event_sha256)
                 "previous_event_sha256": None,  # Will be set computed below
-                "event_id": "evt_01JQ8Z4A1B2C3D4E5F6G7H8J9L0",
+                "event_id": "evt_01JQ8Z4A1B2C3D4E5F6G7H8J9M",
                 "model_id": "mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W",
                 "event": "validated",
                 "at": "2026-11-25T11:00:00Z",
@@ -1275,7 +1569,7 @@ class TestEventChainValidation:
             {
                 "sequence_number": 1,
                 "previous_event_sha256": "0" * 64,
-                "event_id": "evt_01JQ8Z4A1B2C3D4E5F6G7H8J9L0",
+                "event_id": "evt_01JQ8Z4A1B2C3D4E5F6G7H8J9M",
                 "model_id": "mdl_02JQ8Z3K4M5N6P7Q8R9S0T1V2X",
                 "event": "sealed",
                 "at": "2026-11-25T10:30:00Z",
@@ -1287,7 +1581,7 @@ class TestEventChainValidation:
                 # previous_event_sha256 must match the computed event_sha256 of the
                 # prior event in the same model chain (model mdl_01JQ8Z...)
                 "previous_event_sha256": None,  # Will be set computed below
-                "event_id": "evt_01JQ8Z4A1B2C3D4E5F6G7H8J9L1",
+                "event_id": "evt_01JQ8Z4A1B2C3D4E5F6G7H8J9N",
                 "model_id": "mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W",
                 "event": "validated",
                 "at": "2026-11-25T12:00:00Z",
@@ -1299,7 +1593,7 @@ class TestEventChainValidation:
                 # previous_event_sha256 must match the computed event_sha256 of the
                 # prior event in the same model chain (model mdl_02JQ8Z...)
                 "previous_event_sha256": None,  # Will be set computed below
-                "event_id": "evt_01JQ8Z4A1B2C3D4E5F6G7H8J9L2",
+                "event_id": "evt_01JQ8Z4A1B2C3D4E5F6G7H8J9P",
                 "model_id": "mdl_02JQ8Z3K4M5N6P7Q8R9S0T1V2X",
                 "event": "validated",
                 "at": "2026-11-25T13:00:00Z",
@@ -1343,7 +1637,7 @@ class TestEventChainValidation:
             {
                 "sequence_number": 1,  # Duplicate sequence
                 "previous_event_sha256": "0" * 64,
-                "event_id": "evt_01JQ8Z4A1B2C3D4E5F6G7H8J9L0",
+                "event_id": "evt_01JQ8Z4A1B2C3D4E5F6G7H8J9M",
                 "model_id": "mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W",
                 "event": "validated",
                 "at": "2026-11-25T11:00:00Z",
@@ -1373,7 +1667,7 @@ class TestEventChainValidation:
             {
                 "sequence_number": 3,  # Gap: missing 2
                 "previous_event_sha256": "0" * 64,
-                "event_id": "evt_01JQ8Z4A1B2C3D4E5F6G7H8J9L0",
+                "event_id": "evt_01JQ8Z4A1B2C3D4E5F6G7H8J9M",
                 "model_id": "mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W",
                 "event": "validated",
                 "at": "2026-11-25T12:00:00Z",
@@ -1434,7 +1728,7 @@ class TestEventChainValidation:
             {
                 "sequence_number": 2,
                 "previous_event_sha256": "0" * 64,
-                "event_id": "evt_01JQ8Z4A1B2C3D4E5F6G7H8J9L0",
+                "event_id": "evt_01JQ8Z4A1B2C3D4E5F6G7H8J9M",
                 "model_id": "mdl_DIFFERENT",  # Different model - separate chain
                 "event": "validated",
                 "at": "2026-11-25T11:00:00Z",
@@ -1503,7 +1797,7 @@ class TestEventChainValidation:
             {
                 "sequence_number": 1,  # Should have come first
                 "previous_event_sha256": "0" * 64,
-                "event_id": "evt_01JQ8Z4A1B2C3D4E5F6G7H8J9L0",
+                "event_id": "evt_01JQ8Z4A1B2C3D4E5F6G7H8J9M",
                 "model_id": "mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W",
                 "event": "sealed",
                 "at": "2026-11-25T10:00:00Z",

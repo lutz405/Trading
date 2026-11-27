@@ -124,26 +124,41 @@ def validate_rfc3339(value: str, require_utc: bool = False) -> bool:
     return True
 
 # Validator functions
-def validate_model_id(model_id: str) -> bool:
+def validate_model_id(model_id: object) -> bool:
     """Validate model_id format: ^mdl_[0-9A-HJKMNP-TV-Z]{26}$"""
+    if not isinstance(model_id, str):
+        return False
     return bool(re.match(r'^mdl_[0-9A-HJKMNP-TV-Z]{26}$', model_id))
 
-def validate_event_id(event_id: str) -> bool:
+def validate_event_id(event_id: object) -> bool:
     """Validate event_id format: evt_ + ULID (26 chars)."""
+    if not isinstance(event_id, str):
+        return False
     return bool(re.match(r'^evt_[0-9A-HJKMNP-TV-Z]{26}$', event_id))
 
-def validate_sha256(value: str) -> bool:
+def validate_sha256(value: object) -> bool:
     """Validate SHA-256 hex string (64 chars)."""
+    if not isinstance(value, str):
+        return False
     return bool(re.match(r'^[0-9a-f]{64}$', value))
 
 def validate_event(event: dict[str, Any], previous_event: dict[str, Any] | None = None, *, skip_first_event_check: bool = False) -> list[str]:
     """Validate a lifecycle event. Returns list of errors (empty = valid).
 
     Per S1-R5:
-    - event_sha256 is mandatory and must match the JCS canonical hash
+    - event_sha256 is mandatory and its SHA-256 format is validated here.
+      The chain-level verifier compares it against the JCS canonical hash
       of the event (excluding the field itself).
-    - manifest_sha256 is a manifest-level concept, not required at event level.
+    - manifest_sha256 is a manifest-level concept, optional at event level;
+      when present it must be a valid SHA-256 hex string (checked below).
+    - evidence must be a JSON object or null.
+
+    Malformed inputs are rejected with error strings; the function does not
+    raise TypeError/AttributeError for non-object events or non-string fields.
     """
+    if not isinstance(event, dict):
+        return ['Event must be a JSON object']
+
     errors: list[str] = []
 
     # event_sha256 is mandatory per S1-R5
@@ -162,8 +177,12 @@ def validate_event(event: dict[str, Any], previous_event: dict[str, Any] | None 
         if field not in event:
             errors.append(f'Missing required field: {field}')
 
-    # Allow event_sha256 and previous_event_sha256 as valid event fields
-    allowed_fields = {'event_sha256', 'previous_event_sha256'} | set(required_fields)
+    # Allow event_sha256, previous_event_sha256 and manifest_sha256 as valid
+    # event fields.  manifest_sha256 is optional at event level per S1-R5 but,
+    # when present, its format is validated above.
+    allowed_fields = {
+        'event_sha256', 'previous_event_sha256', 'manifest_sha256',
+    } | set(required_fields)
     for key in event:
         if key not in allowed_fields:
             errors.append(f'Unknown field in event: {key}')
@@ -186,16 +205,36 @@ def validate_event(event: dict[str, Any], previous_event: dict[str, Any] | None 
     if 'event' in event and event['event'] not in ('sealed', 'validated', 'approved', 'deprecated', 'revoked'):
         errors.append(f'Invalid event type: {event["event"]}')
 
+    if 'actor' in event and not isinstance(event['actor'], str):
+        errors.append('actor must be a string')
+
+    if (
+        'evidence' in event
+        and event['evidence'] is not None
+        and not isinstance(event['evidence'], dict)
+    ):
+        errors.append('evidence must be an object or null')
+
     if 'sequence_number' in event:
-        if not isinstance(event['sequence_number'], int) or isinstance(event['sequence_number'], bool):
+        sequence = event['sequence_number']
+        if not isinstance(sequence, int) or isinstance(sequence, bool):
             errors.append('sequence_number must be an integer')
-        elif event['sequence_number'] < 1:
+        elif sequence < 1:
             errors.append('sequence_number must be >= 1')
-        # Check sequence gap: must increment by exactly 1 from previous event
-        if previous_event is not None and 'sequence_number' in previous_event:
-            expected = previous_event['sequence_number'] + 1
-            if event['sequence_number'] != expected:
-                errors.append(f'Sequence gap: expected {expected}, got {event["sequence_number"]}')
+        elif previous_event is not None:
+            # Check sequence gap: must increment by exactly 1 from previous
+            # event.  A malformed previous_event must not raise
+            # TypeError/AttributeError while computing the expectation.
+            if not isinstance(previous_event, dict):
+                errors.append('previous_event must be a JSON object')
+            else:
+                previous_sequence = previous_event.get('sequence_number')
+                if not isinstance(previous_sequence, int) or isinstance(previous_sequence, bool):
+                    errors.append('previous_event has invalid sequence_number')
+                else:
+                    expected = previous_sequence + 1
+                    if sequence != expected:
+                        errors.append(f'Sequence gap: expected {expected}, got {sequence}')
 
     # First event check (only when not in a chain context)
     # These checks apply only to the first event of each model_id in a chain.
@@ -324,70 +363,84 @@ def validate_event_chain(events: list[dict[str, Any]]) -> list[str]:
     Returns a list of error strings (empty = valid).
     """
     errors: list[str] = []
+    if not isinstance(events, list):
+        return ['Event chain must be a list of events']
     model_state: dict[str, dict[str, Any]] = {}
-    allowed_event_types = {'sealed', 'validated', 'approved', 'deprecated', 'revoked'}
     for idx, event in enumerate(events):
-        # Validate each event individually using validate_event()
-        # with skip_first_event_check=True so that chain events
-        # (sequence > 1) are not rejected by the "first event" checks.
-        # Individual field validations (ULID formats, date-time,
-        # SHA-256 hashes, unknown fields, event type, required fields)
-        # are still performed.
-        event_errors = validate_event(event, skip_first_event_check=True)
-        for e in event_errors:
+        # A chain element must be a JSON object.  Reject anything else without
+        # attempting attribute access, and keep the physical order intact.
+        if not isinstance(event, dict):
+            errors.append(f'Event {idx}: event must be a JSON object')
+            continue
+        # Individual field validation is centralized in validate_event().
+        # skip_first_event_check=True avoids rejecting continuation events
+        # while the chain-specific first-event rules are applied below.
+        for e in validate_event(event, skip_first_event_check=True):
             errors.append(f'Event {idx}: {e}')
-        # Chain-specific validation: required fields, types, hashes, unknown fields
-        required = ['sequence_number', 'event_id', 'model_id', 'event', 'at', 'actor', 'evidence']
-        for field in required:
-            if field not in event:
-                errors.append(f'Event {idx}: missing required field \'{field}\'')
-        if 'event_sha256' not in event:
-            errors.append(f'Event {idx}: missing required field \'event_sha256\'')
-        else:
-            if not (event['event_sha256'] and len(event['event_sha256']) == 64):
-                errors.append(f'Event {idx}: invalid event_sha256 format')
-        allowed_fields = {'event_sha256', 'previous_event_sha256'} | set(required)
-        for key in event:
-            if key not in allowed_fields:
-                errors.append(f'Event {idx}: unknown field \'{key}\'')
-        etype = event.get('event')
-        if etype not in allowed_event_types:
-            errors.append(f'Event {idx}: invalid event type \'{etype}\'')
         model_id = event.get('model_id')
         sequence = event.get('sequence_number')
         eid = event.get('event_id')
         declared_hash = event.get('event_sha256')
-        if model_id is None:
+        # validate_event() already reports a missing or invalid model_id.
+        # Without a string model_id the event cannot be assigned to a chain.
+        if not isinstance(model_id, str):
             continue
-        if model_id not in model_state:
-            model_state[model_id] = {'next_sequence': 1, 'prior_computed_hash': None, 'seen_ids': set()}
-        state = model_state[model_id]
-        if sequence is not None:
-            if not isinstance(sequence, int) or isinstance(sequence, bool):
-                errors.append(f'Event {idx} ({model_id}): sequence_number must be integer')
-            elif sequence < 1:
-                errors.append(f'Event {idx} ({model_id}): sequence_number must be >= 1')
-            if state['next_sequence'] == 1:
-                if sequence != 1:
-                    errors.append(f'Event {idx} ({model_id}): first event must have sequence_number == 1, got {sequence}')
+        state = model_state.setdefault(
+            model_id,
+            {'next_sequence': 1, 'prior_computed_hash': None, 'seen_ids': set()},
+        )
+        # Chain-specific sequence continuity.  Physical insertion order is
+        # authoritative; events are never sorted or repaired.
+        if isinstance(sequence, int) and not isinstance(sequence, bool):
+            expected = state['next_sequence']
+            if sequence != expected:
+                if expected == 1:
+                    errors.append(
+                        f'Event {idx} ({model_id}): first event must have '
+                        f'sequence_number == 1, got {sequence}'
+                    )
+                else:
+                    errors.append(
+                        f'Event {idx} ({model_id}): sequence_number must be '
+                        f'{expected}, got {sequence}'
+                    )
+            if expected == 1:
                 if event.get('previous_event_sha256') != '0' * 64:
-                    errors.append(f'Event {idx} ({model_id}): first event must have previous_event_sha256 == \'0\'*64')
-                state['next_sequence'] = 2
-            else:
-                if sequence != state['next_sequence']:
-                    errors.append(f'Event {idx} ({model_id}): sequence_number must be {state["next_sequence"]} (continuation from {sequence - 1}), got {sequence}')
-                if event.get('previous_event_sha256') != state['prior_computed_hash']:
-                    errors.append(f'Event {idx} ({model_id}): previous_event_sha256 does not match prior event\'s computed event_sha256')
+                    errors.append(
+                        f'Event {idx} ({model_id}): first event must have '
+                        f'previous_event_sha256 == \'0\'*64'
+                    )
+            elif event.get('previous_event_sha256') != state['prior_computed_hash']:
+                errors.append(
+                    f'Event {idx} ({model_id}): previous_event_sha256 does not '
+                    f'match prior event\'s computed event_sha256'
+                )
+            # Advance even when the sequence is wrong so later events are
+            # checked against the physical chain rather than a repaired one.
+            state['next_sequence'] = sequence + 1
+        # Compute the JCS hash with a controlled error path.  Malformed or
+        # unsupported values must become validation errors, not tracebacks.
         try:
             event_copy = {k: v for k, v in event.items() if k != 'event_sha256'}
             computed_hash = sha256_canonical(event_copy)
-        except (ValueError, TypeError) as exc:
+        except (AttributeError, OverflowError, RecursionError, TypeError, ValueError) as exc:
             errors.append(f'Event {idx} ({model_id}): error computing JCS hash: {exc}')
             computed_hash = None
-        if computed_hash is not None and declared_hash is not None:
-            if computed_hash != declared_hash:
-                errors.append(f'Event {idx} ({model_id}): event_sha256 \'{declared_hash[:16]}...\' does not match computed JCS hash \'{computed_hash[:16]}...\'.')
-        if eid is not None:
+        # Missing/format errors for event_sha256 are reported by
+        # validate_event(); only compare when a string hash was declared.
+        if (
+            computed_hash is not None
+            and isinstance(declared_hash, str)
+            and computed_hash != declared_hash
+        ):
+            errors.append(
+                f'Event {idx} ({model_id}): event_sha256 '
+                f'\'{declared_hash[:16]}...\' does not match computed JCS hash '
+                f'\'{computed_hash[:16]}...\'.'
+            )
+        # Duplicate IDs are tracked per model.  Non-string IDs were already
+        # rejected by validate_event() and must not reach the set.
+        if isinstance(eid, str):
             if eid in state['seen_ids']:
                 errors.append(f'Event {idx} ({model_id}): duplicate event_id \'{eid}\'')
             state['seen_ids'].add(eid)
