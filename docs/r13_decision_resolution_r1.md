@@ -30,7 +30,7 @@
 
 1. **[ACEPTADO POR AUDITORÍA] — R1:** Fase B fue auditada con dictamen **ACCEPTED WITH FINDINGS**; CP-B-01 a CP-B-10 resultaron **PASS**; no hay hallazgos Critical, High ni Medium. La aceptación de CP-B **no autoriza** Fase C, que permanece **BLOQUEADA**.
 2. **[CLOSED] — R2:** la diferencia entre el informe inicial de implementación y el estado auditado se debe a que el propietario realizó personalmente el commit y push. Se registra como aclaración documental cerrada, sin calificarla como incidencia de autorización ni atribuir acciones a terceros.
-3. **[PENDING APPROVAL] — R3:** la permutación exacta entre `class_order` y `classes` aparece en el diseño v4 §5.3 (propuesta no aprobada) y el plan R1.1 la contempla como V4-U06 en Fase B, pero no se implementó. Se recomienda incorporarla al validador semántico v4; el cambio requiere autorización del propietario porque Fase B ya fue auditada y aceptada.
+3. **[CLOSED / PENDING AUTHORIZATION] — R3:** la permutación exacta entre `class_order` y `classes` fue aprobada por el propietario el 2026-11-27 como **DEC-09** (V4-U06). La aprobación normativa queda resuelta; la implementación en `validate_manifest_v4` sigue pendiente de autorización técnica y la reapertura de Fase B no está autorizada.
 4. **[DEFERRED] — R4:** los tres flags son resultados derivados o evidencia de ejecución. Su tipo/estructura se validó en B; su veracidad debe demostrarse en Fase D o en el verificador posterior (S6). No se convierten automáticamente en `true`.
 5. **[DEFERRED / NOT IN SCOPE] — R5:** F-4 y F-5 quedan diferidos sin bloquear CP-B; F-6 es un conjunto de problemas históricos fuera del alcance de B.
 6. **[REVISIÓN R1.1]:** se corrigen AUD-F-1 (etiquetas normativas), AUD-F-2 (estado Git autorreferenciado), AUD-F-3 (autoridad de V4-U06) y AUD-F-4 (distinción entre los flags de purga). Las correcciones son documentales; no cierran las cuestiones técnicas pendientes.
@@ -120,6 +120,7 @@
 | `docs/aud04b_model_provenance_v3_design.md` §5.6 | `class_counts` se declara "en el orden de `class_order`". |
 | v3 §6.1 / I14 y §13.4 / V06 | "El orden de clases es único y consistente"; `class_order` consistente en target, modelos, calibrador y métricas. |
 | `docs/aud04b_model_provenance_v4_implementation_plan_r1.md` §6.1 | V4-U06 aparece con fase **B** y estado "Parcial: ... sin permutación ni normalización explícita". |
+| `docs/aud04b_model_provenance_v4_approval_r1.md` §3 DEC-09 | Regla aprobada expresamente por el propietario el 2026-11-27 (`R13-DEC-09-REGISTRATION-R1`); `class_order` debe ser permutación exacta de `classes`. |
 
 ### 5.2 Interpretación normativa
 
@@ -131,16 +132,16 @@ La correspondencia exacta **no es opcional** ni puede sustituirse por la unicida
 
 JSON Schema 2020-12 puede exigir tipo, `minItems` y `uniqueItems` (ya implementado), pero **no puede expresar la permutación entre dos arrays**. Por tanto, la comprobación debe residir en el validador semántico, no en el schema.
 
-### 5.3 Decisión recomendada (no aprobada)
+### 5.3 Decisión aprobada e implementación pendiente
 
-**Autoridad normativa (AUD-F-3):** la regla de permutación exacta aparece en `docs/aud04b_model_provenance_v4_design.md` §5.3, documento que se identifica a sí mismo como "propuesta documental para revisión humana; no implementada ni aprobada". La regla **no forma parte de DEC-01 a DEC-08**: el registro de aprobación R2 limita el estado `APPROVED` a esas ocho decisiones y conserva las etiquetas de propuesta del diseño como historial documental. El plan R1.1 contempla V4-U06 en su §6.1 con fase B, pero el propio plan declara que no autoriza implementación. En consecuencia, la corrección en `validate_manifest_v4` **requiere autorización explícita del propietario**, porque Fase B ya fue auditada y aceptada. No se afirma que la regla tenga estatus de DEC aprobada.
+**Autoridad normativa (actualización R13-DEC-09-REGISTRATION-R1):** la regla de permutación exacta aparecía originalmente en `docs/aud04b_model_provenance_v4_design.md` §5.3, documento rotulado como propuesta no aprobada, y no formaba parte de DEC-01 a DEC-08. El propietario del proyecto la aprobó expresamente el 2026-11-27 como **DEC-09**, con alcance limitado a V4-U06. La observación documental AUD-F-3 relativa a la ausencia de aprobación queda por ello **resuelta en lo normativo**. La aprobación **no autoriza** modificar código, schema ni tests, ni reabrir Fase B: esos actos requieren autorización técnica separada porque Fase B ya fue auditada y aceptada. Fase C continúa bloqueada.
 
 **[RECOMENDACIÓN TÉCNICA]**
 
 1. **Schema:** mantener `minItems: 1` y `uniqueItems: true` en `classes` y `class_order`. No inventar restricciones adicionales en el schema.
 2. **Validador semántico v4:** incorporar en `validate_manifest_v4` la comprobación de que, tras la normalización documentada en §5.3, `class_order` es una permutación exacta de `classes`. Rechazar booleanos, `null`, strings, números fraccionarios, NaN/infinitos y duplicados; `1.0` y `1` se tratan como el mismo valor.
-3. **Fase responsable:** Fase B (es donde el plan sitúa V4-U06). Como Fase B ya fue aceptada, cualquier cambio requiere **[PENDIENTE DE APROBACIÓN]** del propietario.
-4. **No se requiere una DEC nueva**: la regla ya está en el diseño v4 §5.3 y en V4-U06 del plan; no por ello tiene estatus de DEC aprobada. La autorización exigida es la del propietario para modificar una fase cerrada y ajustar el plan R1.1.
+3. **Fase responsable:** Fase B (es donde el plan sitúa V4-U06). Como Fase B ya fue auditada y aceptada, su reapertura requiere **[PENDIENTE DE AUTORIZACIÓN]** del propietario; hoy está `NOT AUTHORIZED`.
+4. **DEC-09 aprobada**: la regla tiene estatus normativo `APPROVED` desde el 2026-11-27. No se requiere una DEC adicional, pero sí autorización técnica separada para modificar una fase cerrada y ejecutar el cambio en `validate_manifest_v4`.
 
 ### 5.4 Criterio de aceptación verificable
 
@@ -150,7 +151,7 @@ JSON Schema 2020-12 puede exigir tipo, `minItems` y `uniqueItems` (ya implementa
 - El error identifica la ruta `$.target.class_order` y no depende del orden de iteración de los diccionarios.
 - Prueba asociada: extensión de V4-U06 con casos válidos, inválidos y límite `1.0` vs `1`.
 
-**Estado R3: PENDING APPROVAL.**
+**Estado R3: CLOSED en lo normativo (DEC-09 `APPROVED`). Implementación: `PENDING AUTHORIZATION`. Reapertura de Fase B: `NOT AUTHORIZED`. Fase C: `BLOCKED`.**
 
 ---
 
@@ -244,7 +245,7 @@ No se introducen correcciones de código.
 |---|---|---|---|---|
 | R1 — Estado de Fase B | Registrar `ACCEPTED WITH FINDINGS`, CP-B-01…10 PASS, sin Critical/High/Medium; separar aceptación de autorización | Cierre de B (auditoría) | Dictamen e evidencia reproducida en §3 | **CLOSED** |
 | R2 — Discrepancia Git | Aclaración documental: commit/push del propietario; contenido coincide con el alcance | Cierre de B (auditoría) | §4; sin incidencia de autorización | **CLOSED** |
-| R3 — V4-U06 | Exigir permutación exacta en el validador semántico v4; mantener límites en schema | B (modificación de fase ya aceptada) | §5.4: permutación válida/inválida, tipos y rango | **PENDING APPROVAL** |
+| R3 — V4-U06 | DEC-09 `APPROVED` (2026-11-27); implementación pendiente de autorización técnica | B (reapertura `NOT AUTHORIZED`) | §5.4: permutación válida/inválida, tipos y rango; sin cambios de código | **CLOSED (normativa) / PENDING AUTHORIZATION (implementación)** |
 | R4a — `label_purge_satisfied`, `disjoint`, `purge_satisfied` | Veracidad derivada de relaciones declaradas; no forzar `true` | D | §6.2–6.3: gaps, solapamiento, banderas coherentes | **DEFERRED** |
 | R4b — `labels_within_partition` | Declaración en D; evidencia efectiva solo con datos | D + verificador posterior | §6.4: sin afirmación de S1 sobre datos no entregados | **DEFERRED** |
 | R4c — `test_evaluated_once` | Valor `true` para admisión; evidencia de ejecución en S6 | B/D + S6 | §6.5: informe con `model_id`, `manifest_sha256`, métricas y evaluación única | **DEFERRED** |
@@ -260,12 +261,14 @@ No se introducen correcciones de código.
 
 ---
 
-## 9. Posibles modificaciones futuras al plan R1.1 (no aplicadas)
+## 9. Modificaciones registradas y pendientes
 
-**[RECOMENDACIÓN TÉCNICA — PENDIENTE DE APROBACIÓN]**
+**[RECOMENDACIÓN TÉCNICA — IMPLEMENTACIÓN PENDIENTE DE AUTORIZACIÓN]**
 
-1. **§5 Fase B, ítems 2 y 5:** añadir explícitamente la comprobación semántica de permutación `class_order` ↔ `classes` y su prueba negativa. Hoy el ítem 2 enumera patrones y tipos, no relaciones entre arrays.
-2. **§6.1 fila V4-U06:** sustituir "Parcial: ... sin permutación" por un criterio verificable de permutación con fase B, o reasignar explícitamente a D. Requiere decisión del propietario porque V4-U06 figura hoy como B.
+Nota: el registro `R13-DEC-09-REGISTRATION-R1` ya incorporó DEC-09 y actualizó la fila V4-U06 del plan. Las acciones de implementación siguen sin autorizar.
+
+1. **§5 Fase B, ítems 2 y 5:** añadir explícitamente la comprobación semántica de permutación `class_order` ↔ `classes` y su prueba negativa. Hoy el ítem 2 enumera patrones y tipos, no relaciones entre arrays. **Pendiente de autorización técnica.**
+2. **§6.1 fila V4-U06:** ya actualizada para distinguir `APPROVED` (DEC-09) de `PENDING AUTHORIZATION` y `NOT AUTHORIZED` para la reapertura de Fase B. **Cerrada documentalmente.**
 3. **§5 Fase B / Fase D:** precisar que los flags derivados se comprueban en D y que `test_evaluated_once` requiere evidencia de S6, fuera de A–G.
 4. **§9 Aplazamientos:** registrar la verificación de evidencia de `test_evaluated_once` y de `labels_within_partition` como capacidades posteriores con interfaz y criterios propios.
 
@@ -277,20 +280,21 @@ No se introducen correcciones de código.
 
 | Comprobación | Resultado |
 |---|---|
-| DEC-01 a DEC-08 no reabiertas ni modificadas | Confirmado: siguen `APPROVED` en el documento de aprobación |
-| Decisiones propuestas sin contradecir DEC aprobadas | Confirmado: R3/R4 desarrollan requisitos ya presentes en la spec; no crean DEC nuevas |
+| DEC-01 a DEC-08 no reabiertas ni modificadas | Confirmado: siguen `APPROVED` intactas en el documento de aprobación |
+| DEC-09 registrada | Confirmado: `APPROVED` el 2026-11-27 por el propietario; desarrolla V4-U06 sin modificar DEC-01 a DEC-08 |
+| Decisiones propuestas sin contradecir DEC aprobadas | Confirmado: R3/R4 desarrollan requisitos presentes en la spec; DEC-09 es la única decisión nueva |
 | Aceptación de CP-B no presentada como autorización de Fase C | Confirmado: Fase C sigue BLOQUEADA |
 | Recomendaciones no presentadas como decisiones aprobadas | Confirmado: marcadas `[RECOMENDACIÓN TÉCNICA]` / `[PENDIENTE DE APROBACIÓN]` |
 | Nombres de fases y V4-Uxx correctos | Confirmado contra plan R1.1 y diseño v4 |
-| Archivos modificados | Solo el presente documento; el commit de publicación `53cfd6f…` contiene únicamente `docs/r13_decision_resolution_r1.md` |
+| Archivos modificados | En R1.1: solo el presente documento (commit `53cfd6f…`). En este registro DEC-09: documento de aprobación, plan R1.1 y el presente documento; sin cambios de código, schema ni tests |
 
 ---
 
 ## 11. Informe final — R13-DECISION-RESOLUTION-R1
 
 1. **Archivo creado:** `docs/r13_decision_resolution_r1.md`.
-2. **Hallazgos resueltos y pendientes:** R1 y R2 **CLOSED**; R3 **PENDING APPROVAL**; R4 **DEFERRED**; F-4 y F-5 **DEFERRED**; F-6 **NOT IN SCOPE**.
-3. **Decisión recomendada para V4-U06:** exigir la permutación exacta en el validador semántico v4, manteniendo `minItems`/`uniqueItems` en el schema; fase B, con autorización previa por tratarse de una fase ya aceptada. No requiere una DEC nueva.
+2. **Hallazgos resueltos y pendientes:** R1 y R2 **CLOSED**; R3 **CLOSED en lo normativo** y **PENDING AUTHORIZATION** en lo técnico; R4 **DEFERRED**; F-4 y F-5 **DEFERRED**; F-6 **NOT IN SCOPE**.
+3. **DEC-09 aprobada:** V4-U06 exige la permutación exacta en el validador semántico v4, manteniendo `minItems`/`uniqueItems` en el schema. La aprobación es normativa; la implementación en Fase B requiere autorización técnica separada y no se ha realizado.
 4. **Tratamiento recomendado de los flags:** ninguno se fuerza a `true`; veracidad derivada en Fase D para purga/leakage; `labels_within_partition` solo afirmable con datos por verificador posterior; `test_evaluated_once` exige informe de evaluación única verificado en S6.
 5. **Matriz de trazabilidad:** sección 8.
 6. **Modificaciones futuras al plan R1.1:** sección 9, todas pendientes de autorización.

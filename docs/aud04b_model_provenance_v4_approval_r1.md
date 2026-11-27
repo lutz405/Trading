@@ -1,8 +1,9 @@
 # R13-APPROVAL-4.0.0-R1 — Registro formal de decisiones normativas
 
-**Estado del registro:** **APPROVED** — aprobación normativa humana explícita de DEC-01 a DEC-08 para provenance 4.0.0. No implementa R13 ni modifica el comportamiento de S1.
+**Estado del registro:** **APPROVED** — aprobación normativa humana explícita de DEC-01 a DEC-08 para provenance 4.0.0. No implementa R13 ni modifica el comportamiento de S1. DEC-09 fue aprobada posteriormente por el propietario del proyecto el 2026-11-27, conforme al registro `R13-DEC-09-REGISTRATION-R1`.
 
 **Revisión de aprobación:** R13-APPROVAL-4.0.0-R2.
+**Registro de DEC-09:** `R13-DEC-09-REGISTRATION-R1` (2026-11-27).
 
 **Autoridad de aprobación:** aprobación humana explícita del responsable del proyecto. No se registra nombre, firma criptográfica, identidad autenticada ni credenciales.
 
@@ -34,6 +35,8 @@ R13-APPROVAL-4.0.0-R2 modifica exclusivamente el estado de DEC-01 a DEC-08. Las 
 
 DEC-01 a DEC-08 están **APPROVED**. Ninguna de esas aprobaciones es autorización para modificar schema, código, tests, fixtures, loaders, registry, writer, inferencia o S2.
 
+DEC-09 está **APPROVED** desde el 2026-11-27 por decisión expresa del propietario del proyecto. Su aprobación no autoriza por sí sola modificar schema, código, tests, reabrir Fase B ni iniciar Fase C; esos actos requieren autorización técnica separada.
+
 ## 2. Matriz de decisiones
 
 | ID | Decisión | Estado | Especificación 4.0.0 | Impacto en schema futuro | Impacto en implementación futura | Pruebas futuras |
@@ -46,6 +49,7 @@ DEC-01 a DEC-08 están **APPROVED**. Ninguna de esas aprobaciones es autorizaci�
 | DEC-06 | run_fingerprint con allowlist normativa | APPROVED | §9 | Rutas incluidas, opcionales y anulables definidas | Construcción de preimagen reproducible | V4-U10, V4-U11 y vectores dorados completos |
 | DEC-07 | eventos de nueve campos y sidecar Ed25519 | APPROVED | §§7–8 | Contratos de evento, evidence y sidecar | Cadena estructural; asociación de sidecar; sin confianza criptográfica S1 | V4-U07, V4-U08, V4-U09 y V4-U11 |
 | DEC-08 | posiciones fuente y purga por fuente | APPROVED | §§4–5 | Límites fuente y reglas de partición | Validación estructural; verificador de datos posterior separado | V4-U02, V4-U03, V4-U14 y V4-U15 |
+| DEC-09 | permutación exacta de `class_order` respecto de `classes` (V4-U06) | APPROVED | §5.3 | Sin restricciones adicionales en JSON Schema; comprobación semántica | Validación en `validate_manifest_v4`; requiere autorización separada para reabrir Fase B | V4-U06 y casos positivos, negativos y de límite |
 
 ## 3. Decisiones aprobadas
 
@@ -145,6 +149,41 @@ DEC-01 a DEC-08 están **APPROVED**. Ninguna de esas aprobaciones es autorizaci�
 
 **Relación con la especificación:** coincide con §§4–5, V4-U02, V4-U03, V4-U14 y V4-U15.
 
+### DEC-09 — correspondencia entre `classes` y `class_order` (V4-U06)
+
+**Estado:** APPROVED.
+
+**Fecha de aprobación:** 2026-11-27.
+**Autoridad:** propietario del proyecto.
+**Registro:** `R13-DEC-09-REGISTRATION-R1`.
+
+**Decisión aprobada:**
+
+1. `class_order` debe ser una permutación exacta de `classes`.
+2. Ambos arrays deben contener elementos únicos.
+3. Ambos deben representar exactamente el mismo conjunto de clases.
+4. El orden de los elementos puede diferir; se admite cualquier permutación siempre que los elementos coincidan exactamente.
+5. Se aplica la normalización numérica especificada en el diseño v4 §5.3: `1` y `1.0` se consideran equivalentes tras la normalización, limitada a valores finitos, sin fracción y dentro del rango seguro de JCS.
+6. Los booleanos no se aceptan como enteros.
+7. Se rechazan duplicados, tipos inválidos y enteros fuera del rango seguro.
+8. Los errores de validación deben identificar la ruta `$.target.class_order`.
+
+**Ejemplos auditables:**
+
+| `classes` | `class_order` | Resultado |
+|---|---|---|
+| `[0,1,2]` | `[0,1,2]` | Aceptar |
+| `[0,1,2]` | `[2,0,1]` | Aceptar |
+| `[0,1,2]` | `[0,1,9]` | Rechazar |
+| `[0,1,2]` | `[0,1,1]` | Rechazar |
+| `[0,1,2]` | `[0,true,2]` | Rechazar |
+
+**Justificación:** `classes` define el conjunto de etiquetas permitidas y `class_order` define el orden posicional de columnas de probabilidad y de conteos. Ambos intervienen en `run_fingerprint`, en `calibration_input_sha256` y en la alineación de `class_counts`; una discrepancia cambiaría la identidad del run y la interpretación de las probabilidades.
+
+**Impacto futuro:** la comprobación debe residir en el validador semántico v4, no en JSON Schema. La aprobación de DEC-09 **no autoriza** modificar código, schema, tests ni reabrir Fase B; esos actos requieren autorización técnica separada.
+
+**Relación con la especificación:** desarrolla el diseño v4 §5.3 y V4-U06 del plan R1.1. No modifica ni reinterpret DEC-01 a DEC-08.
+
 ## 4. Registro de aprobaciones, rechazos y aplazamientos
 
 ### Aprobadas
@@ -161,6 +200,7 @@ La autoridad indicada en el encabezado aprueba normativamente las siguientes dec
 | DEC-06 | allowlist normativa de run_fingerprint | APPROVED |
 | DEC-07 | payload de nueve campos, evento de diez campos y sidecar Ed25519 | APPROVED |
 | DEC-08 | posiciones fuente y purga por fuente | APPROVED |
+| DEC-09 | permutación exacta de `class_order` respecto de `classes` (V4-U06) | APPROVED |
 
 ### Rechazadas
 
@@ -179,6 +219,8 @@ Ninguna. No se ha presentado una decisión humana de rechazo.
 ## 5. Conflictos y consistencia
 
 No se detectó un conflicto normativo entre DEC-01 a DEC-08 y el contenido técnico de la especificación 4.0.0. Las decisiones concretan los puntos que la especificación marcaba como pendientes, sin alterar el contrato histórico 3.0.0. Por el límite de alcance de R2, el documento de especificación conserva sus etiquetas históricas de propuesta; su estado de aprobación para estas ocho decisiones queda registrado en §1 de este documento.
+
+DEC-09 se registró por separado el 2026-11-27. Desarrolla el diseño v4 §5.3 y V4-U06 del plan R1.1 sin modificar ni reinterpretar DEC-01 a DEC-08; su aprobación no implica autorización de implementación.
 
 Hay dos límites deliberados que deben mantenerse visibles:
 
@@ -199,4 +241,4 @@ Antes de implementar, la especificación aprobada debe mantener:
 
 ## 7. Límites de alcance preservados
 
-Este registro es solo documentación. No modifica código Python, JSON Schema, fixtures, tests, dependencias, modelos, datasets, cuarentena ni archivos Parquet. No implementa R13, no cambia el comportamiento de S1, no inicia S2, no habilita inferencia ni autoriza modelos.
+Este registro es solo documentación. No modifica código Python, JSON Schema, fixtures, tests, dependencias, modelos, datasets, cuarentena ni archivos Parquet. No implementa R13, no cambia el comportamiento de S1, no inicia S2, no habilita inferencia ni autoriza modelos. Tampoco autoriza la reapertura de Fase B para implementar DEC-09 ni el inicio de Fase C.

@@ -59,6 +59,7 @@
 - Líneas 39–48: matriz con `APPROVED` en las ocho filas.
 - Líneas 52–146: cada `### DEC-0x` con `**Estado:** APPROVED.` y `**Decisión aprobada:**`.
 - Líneas 154–163: tabla "Aprobadas" con las ocho decisiones `APPROVED`; "Rechazadas: Ninguna".
+- **H/P** — DEC-09 fue registrada posteriormente por el propietario el 2026-11-27 (`R13-DEC-09-REGISTRATION-R1`) para V4-U06. El estado normativo de V4-U06 es `APPROVED`; su implementación sigue `PENDING AUTHORIZATION` y la reapertura de Fase B no está autorizada. Esta distinción se refleja en la fila V4-U06 de §6.1.
 - Líneas 171–177: aplazamientos.
 - Líneas 35 y 190: la aprobación **no autoriza** modificar schema/código/tests/fixtures/loaders/registry/writer/inferencia/S2.
 
@@ -349,7 +350,7 @@ Archivo: `src/tradingai/ml/provenance.py` (495 líneas; encabezado: "Provenance 
 | V4-U03 | Purga en todas las fronteras con `max(H,E)`. | D | Parcial: solo `rows_between_partitions >= horizon` en v3. |
 | V4-U04 | Calibration compartida con equivalencia completa; sin frontera propia. | D | Parcial: solo `row_start/row_end`. |
 | V4-U05 | Timestamps duplicados/desordenados, >9 decimales y zona desconocida rechazados; UTC sin redondeo. | C/D | No implementado en provenance; parcial en `pipeline._validate_temporal`. |
-| V4-U06 | Clases duplicadas, booleanos, strings y etiquetas fuera de `classes` rechazados. | B | Parcial: schema v3 usa `integer`; sin permutación ni normalización explícita. |
+| V4-U06 | Clases duplicadas, booleanos, strings y etiquetas fuera de `classes` rechazados; `class_order` debe ser permutación exacta de `classes` (DEC-09). | B (prevista) | **Aprobación normativa:** APPROVED (DEC-09, 2026-11-27, registro `R13-DEC-09-REGISTRATION-R1`). **Implementación:** PENDING AUTHORIZATION. **Reapertura de Fase B:** NOT AUTHORIZED. Regla vigente pero todavía no implementada; la aprobación no autoriza cambios de código ni de tests. |
 | V4-U07 | Transiciones fuera de tabla, estados repetidos y salidas de terminales rechazados. | E | No implementado. |
 | V4-U08 | Evidence con campos desconocidos o tipos incorrectos rechazada. | B/E | No implementado (`evidence` solo objeto/null). |
 | V4-U09 | Sidecars ausentes/duplicados/mal asociados rechazados; sin afirmar firma verificada. | F | No implementado. |
