@@ -10,6 +10,7 @@ or sidecars cryptographically (Fase F).  All public functions return list[str].
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import unicodedata
@@ -174,6 +175,54 @@ def validate_safe_integers_v4(manifest: dict[str, Any]) -> list[str]:
     ]
 
 
+def _normalized_class_values(values: object) -> list[int] | None:
+    """Normalise a class array per design §5.3, or return None if invalid.
+
+    Booleans are never integers. Floats are accepted only when finite and
+    integral. Duplicates are detected after normalisation (so 1 and 1.0
+    collide). Unhashable or unexpected types are rejected without raising.
+    """
+    if not isinstance(values, list) or not values:
+        return None
+    normalized: list[int] = []
+    seen: set[int] = set()
+    for value in values:
+        if isinstance(value, bool):
+            return None
+        if isinstance(value, int):
+            candidate = value
+        elif isinstance(value, float):
+            if not math.isfinite(value) or not value.is_integer():
+                return None
+            candidate = int(value)
+        else:
+            return None
+        if abs(candidate) > MAX_SAFE_INTEGER:
+            return None
+        if candidate in seen:
+            return None
+        seen.add(candidate)
+        normalized.append(candidate)
+    return normalized
+
+
+def _validate_class_order_permutation_v4(manifest: dict[str, Any]) -> list[str]:
+    """DEC-09: class_order must be an exact permutation of classes."""
+    target = manifest.get('target')
+    if not isinstance(target, dict):
+        return []
+    classes = _normalized_class_values(target.get('classes'))
+    order = _normalized_class_values(target.get('class_order'))
+    if classes is None or order is None or sorted(classes) != sorted(order):
+        return [
+            (
+                '$.target.class_order: must be an exact permutation of $.target.classes '
+                'with unique, valid, in-range integers'
+            )
+        ]
+    return []
+
+
 def _get_path(obj: Any, path: str) -> Any:
     current = obj
     for token in path.lstrip('$').lstrip('.').split('.'):
@@ -280,6 +329,7 @@ def validate_manifest_v4(manifest: object) -> list[str]:
 
     errors = validate_schema_v4(manifest)
     errors.extend(validate_safe_integers_v4(manifest))
+    errors.extend(_validate_class_order_permutation_v4(manifest))
     for path in _TIMESTAMP_PATHS:
         value = _get_path(manifest, path)
         if value is not _MISSING and not validate_timestamp_v4(value):

@@ -291,6 +291,104 @@ class TestSchemaV4:
         assert validate_manifest_v4(manifest)
 
 
+class TestClassOrderPermutation:
+    """DEC-09: class_order must be an exact permutation of classes."""
+
+    @staticmethod
+    def _has_dec09_error(errors: list[str]) -> bool:
+        return any(
+            error.startswith('$.target.class_order: must be an exact permutation')
+            for error in errors
+        )
+
+    def test_same_order_is_accepted(self):
+        manifest = _valid_manifest()
+        manifest['target']['classes'] = [0, 1, 2]
+        manifest['target']['class_order'] = [0, 1, 2]
+        assert validate_manifest_v4(manifest) == []
+
+    def test_different_permutation_is_accepted(self):
+        manifest = _valid_manifest()
+        manifest['target']['classes'] = [0, 1, 2]
+        manifest['target']['class_order'] = [2, 0, 1]
+        assert validate_manifest_v4(manifest) == []
+
+    def test_one_and_one_point_zero_are_equivalent(self):
+        manifest = _valid_manifest()
+        manifest['target']['classes'] = [0, 1, 2]
+        manifest['target']['class_order'] = [0, 1.0, 2]
+        assert validate_manifest_v4(manifest) == []
+        manifest = _valid_manifest()
+        manifest['target']['classes'] = [0, 1.0, 2]
+        manifest['target']['class_order'] = [0, 1, 2]
+        assert validate_manifest_v4(manifest) == []
+
+    def test_safe_integer_boundaries_are_accepted(self):
+        manifest = _valid_manifest()
+        manifest['target']['classes'] = [0, MAX_SAFE_INTEGER]
+        manifest['target']['class_order'] = [MAX_SAFE_INTEGER, 0]
+        assert validate_manifest_v4(manifest) == []
+
+    def test_missing_element_is_rejected_with_normative_path(self):
+        manifest = _valid_manifest()
+        manifest['target']['classes'] = [0, 1, 2]
+        manifest['target']['class_order'] = [0, 1, 9]
+        errors = validate_manifest_v4(manifest)
+        assert self._has_dec09_error(errors)
+        assert any(error.startswith('$.target.class_order') for error in errors)
+
+    def test_additional_element_is_rejected_with_normative_path(self):
+        manifest = _valid_manifest()
+        manifest['target']['classes'] = [0, 1, 2]
+        manifest['target']['class_order'] = [0, 1, 2, 3]
+        assert self._has_dec09_error(validate_manifest_v4(manifest))
+
+    def test_duplicates_are_rejected_with_normative_path(self):
+        manifest = _valid_manifest()
+        manifest['target']['classes'] = [0, 1, 2]
+        manifest['target']['class_order'] = [0, 1, 1]
+        assert self._has_dec09_error(validate_manifest_v4(manifest))
+
+    def test_booleans_are_rejected_with_normative_path(self):
+        manifest = _valid_manifest()
+        manifest['target']['classes'] = [0, 1, 2]
+        manifest['target']['class_order'] = [0, True, 2]
+        assert self._has_dec09_error(validate_manifest_v4(manifest))
+
+    def test_incompatible_and_unhashable_types_are_rejected(self):
+        for invalid in ('1', None, [1], {'value': 1}, 0.5, float('nan'), float('inf')):
+            manifest = _valid_manifest()
+            manifest['target']['classes'] = [0, 1, 2]
+            manifest['target']['class_order'] = [0, invalid, 2]
+            errors = validate_manifest_v4(manifest)
+            assert self._has_dec09_error(errors), invalid
+
+    def test_out_of_safe_range_is_rejected_with_normative_path(self):
+        manifest = _valid_manifest()
+        manifest['target']['classes'] = [0, 1]
+        manifest['target']['class_order'] = [MAX_SAFE_INTEGER + 1, 0]
+        errors = validate_manifest_v4(manifest)
+        assert self._has_dec09_error(errors)
+        assert any('safe range' in error for error in errors)
+
+    def test_empty_arrays_are_rejected_with_normative_path(self):
+        manifest = _valid_manifest()
+        manifest['target']['classes'] = []
+        manifest['target']['class_order'] = []
+        assert self._has_dec09_error(validate_manifest_v4(manifest))
+
+    def test_check_is_deterministic_and_does_not_mutate(self):
+        manifest = _valid_manifest()
+        manifest['target']['classes'] = [0, 1, 2]
+        manifest['target']['class_order'] = [0, 1, 9]
+        before = copy.deepcopy(manifest)
+        first = validate_manifest_v4(manifest)
+        second = validate_manifest_v4(manifest)
+        assert first == second
+        assert self._has_dec09_error(first)
+        assert manifest == before
+
+
 class TestStructuralValidators:
     def test_reason_code_pattern_boundaries(self):
         assert validate_reason_code_v4('a')
