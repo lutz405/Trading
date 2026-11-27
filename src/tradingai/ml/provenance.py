@@ -9,9 +9,46 @@ import re
 from datetime import datetime
 from typing import Any
 
-# JCS Canonicalization (RFC 8785)
 import rfc8785
 
+# Manifest version dispatch (Fase A)
+# ---------------------------------
+MANIFEST_VERSION_V3 = '3.0.0'
+MANIFEST_VERSION_V4 = '4.0.0'
+
+V4_PENDING_MESSAGE = 'schema_version 4.0.0: implementación pendiente (Fase B)'
+
+
+class ManifestVersionError(Exception):
+    """Typed internal signal: a manifest version cannot be dispatched."""
+
+
+class ManifestVersionNotImplementedError(ManifestVersionError):
+    """4.0.0 is recognized, but its validator belongs to Fase B."""
+
+
+class ManifestVersionUnsupportedError(ManifestVersionError):
+    """Version is missing, malformed or unknown; fail closed."""
+
+
+def _version_error_message(version: object) -> str:
+    prefix = (
+        'Missing schema_version'
+        if version is None
+        else f'Unsupported schema_version {version!r}'
+    )
+    return (
+        f'{prefix}: expected {MANIFEST_VERSION_V3!r} or {MANIFEST_VERSION_V4!r}; '
+        'manifest fields (including model_id) cannot be validated'
+    )
+
+
+_MANIFEST_NOT_OBJECT_MESSAGE = (
+    'Manifest must be a JSON object: cannot select schema_version; '
+    'model_id cannot be validated'
+)
+
+# JCS Canonicalization (RFC 8785)
 def jcs_canonicalize(obj: Any) -> str:
     """Canonicalize a JSON-compatible object per RFC 8785 JCS.
     Returns the canonical UTF-8 string (no trailing newline).
@@ -452,18 +489,18 @@ def validate_event_chain(events: list[dict[str, Any]]) -> list[str]:
 
 # Dependencies and packaging (documented separately)
 # ----------------------------------------------------------
-def validate_manifest(manifest: dict[str, Any]) -> list[str]:
-    """Validate a manifest dict. Integrates all structural and semantic checks.
+def _dispatch_manifest_version(manifest: dict[str, Any]) -> str:
+    """Select the validator by declared schema_version; never infer a version."""
+    version = manifest.get('schema_version')
+    if version == MANIFEST_VERSION_V3:
+        return MANIFEST_VERSION_V3
+    if version == MANIFEST_VERSION_V4:
+        raise ManifestVersionNotImplementedError(V4_PENDING_MESSAGE)
+    raise ManifestVersionUnsupportedError(_version_error_message(version))
 
-    Per R7 integrates:
-    - JSON Schema validation
-    - State and format checks for model_id
-    - Dates (RFC 3339 UTC)
-    - Hashes and fingerprints
-    - Calibrator binding to base model
-    - Partition consistency (temporal ordering, counts, purge)
-    - Feature count consistency
-    """
+
+def _validate_manifest_v3(manifest: dict[str, Any]) -> list[str]:
+    """Frozen 3.0.0 validator body: historical checks and messages."""
     errors: list[str] = []
 
     errors.extend(validate_schema(manifest))
@@ -492,4 +529,26 @@ def validate_manifest(manifest: dict[str, Any]) -> list[str]:
     errors.extend(validate_partition_consistency(manifest))
 
     return errors
+
+
+def validate_manifest(manifest: dict[str, Any]) -> list[str]:
+    """Validate a manifest dict through explicit schema_version dispatch.
+
+    - '3.0.0': frozen historical validator, with unchanged checks and messages.
+    - '4.0.0': typed internal error converted to the historical list[str]
+      contract; Fase B pending. No partial validation, no 3.0.0 defaults and
+      no call to the 3.0.0 validator.
+    - missing/unknown/malformed version: explicit fail-closed rejection.
+    Public name, signature and return type are preserved.
+    """
+    if not isinstance(manifest, dict):
+        return [_MANIFEST_NOT_OBJECT_MESSAGE]
+    try:
+        version = _dispatch_manifest_version(manifest)
+    except ManifestVersionError as exc:
+        return [str(exc)]
+    if version == MANIFEST_VERSION_V3:
+        return _validate_manifest_v3(manifest)
+    # Defensive only: the dispatcher never returns V4 without raising.
+    return [V4_PENDING_MESSAGE]
 
