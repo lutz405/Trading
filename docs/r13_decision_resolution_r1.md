@@ -1,8 +1,9 @@
 # R13-DECISION-RESOLUTION-R1 — Resolución documental de hallazgos de Fase B
 
 **Estado del documento:** resolución documental. No modifica código, schemas, tests, dependencias, decisiones normativas ni el plan R1.1.
+**Revisión:** R1.1 (correcciones derivadas de `R13-AUDIT-DECISION-RESOLUTION-R1`, dictamen `ACCEPTED WITH FINDINGS`).
 **Fecha:** 2026-11-27.
-**Base:** commit `f17246e0abf5878f3ad6f2df84d30bb76a351542` (`main`, `origin/main` alineados, árbol limpio).
+**Base:** el presente documento fue publicado por el propietario en el commit `53cfd6f28a169f2e71edf557e66b7c4f5ea17a1d`, hijo de `f17246e0abf5878f3ad6f2df84d30bb76a351542` (Fase B). La auditoría verificó HEAD local y remoto alineados en `53cfd6f…` y árbol de trabajo limpio.
 
 **Convención de estado:**
 
@@ -17,7 +18,8 @@
 
 | Marca | Significado |
 |---|---|
-| **[APROBADO]** | DEC-01 a DEC-08, aprobadas normativamente con anterioridad. No se reabren. |
+| **[APROBADO]** | **Exclusivamente** DEC-01 a DEC-08, aprobadas normativamente con anterioridad. No se reabren. |
+| **[REQUISITO DE DISEÑO / CRITERIO DE PLAN]** | Contenido del diseño v4 o del plan R1.1. No constituye una DEC aprobada ni autoriza implementación por sí mismo. |
 | **[ACEPTADO POR AUDITORÍA]** | Resultado de la auditoría independiente `R13-AUDIT-IMPLEMENTATION-B-CP-B-R1`. No equivale a autorización de la siguiente fase. |
 | **[RECOMENDACIÓN TÉCNICA]** | Propuesta del responsable de trazabilidad; **no** es una decisión aprobada. |
 | **[PENDIENTE DE APROBACIÓN]** | Acción que requiere autorización explícita del propietario. |
@@ -28,9 +30,10 @@
 
 1. **[ACEPTADO POR AUDITORÍA] — R1:** Fase B fue auditada con dictamen **ACCEPTED WITH FINDINGS**; CP-B-01 a CP-B-10 resultaron **PASS**; no hay hallazgos Critical, High ni Medium. La aceptación de CP-B **no autoriza** Fase C, que permanece **BLOQUEADA**.
 2. **[CLOSED] — R2:** la diferencia entre el informe inicial de implementación y el estado auditado se debe a que el propietario realizó personalmente el commit y push. Se registra como aclaración documental cerrada, sin calificarla como incidencia de autorización ni atribuir acciones a terceros.
-3. **[PENDING APPROVAL] — R3:** la permutación exacta entre `class_order` y `classes` está exigida por la especificación 4.0.0 y el plan la asigna a Fase B, pero no se implementó. Se recomienda incorporarla al validador semántico v4; el cambio requiere autorización porque Fase B ya fue aceptada.
+3. **[PENDING APPROVAL] — R3:** la permutación exacta entre `class_order` y `classes` aparece en el diseño v4 §5.3 (propuesta no aprobada) y el plan R1.1 la contempla como V4-U06 en Fase B, pero no se implementó. Se recomienda incorporarla al validador semántico v4; el cambio requiere autorización del propietario porque Fase B ya fue auditada y aceptada.
 4. **[DEFERRED] — R4:** los tres flags son resultados derivados o evidencia de ejecución. Su tipo/estructura se validó en B; su veracidad debe demostrarse en Fase D o en el verificador posterior (S6). No se convierten automáticamente en `true`.
 5. **[DEFERRED / NOT IN SCOPE] — R5:** F-4 y F-5 quedan diferidos sin bloquear CP-B; F-6 es un conjunto de problemas históricos fuera del alcance de B.
+6. **[REVISIÓN R1.1]:** se corrigen AUD-F-1 (etiquetas normativas), AUD-F-2 (estado Git autorreferenciado), AUD-F-3 (autoridad de V4-U06) y AUD-F-4 (distinción entre los flags de purga). Las correcciones son documentales; no cierran las cuestiones técnicas pendientes.
 
 ---
 
@@ -40,11 +43,12 @@
 |---|---|
 | Repositorio | `lutz405/Trading` |
 | Rama | `main` |
-| HEAD | `f17246e0abf5878f3ad6f2df84d30bb76a351542` |
-| Padre | `e83ad182483c9ec2eb446b757ee53ea8496d31a2` (Fase A) |
-| Abuelo | `adad0670b9d9247c2c510c4099ddd126bee0408f` |
-| Remoto | `origin/main` = `f17246e…` |
-| Árbol de trabajo | Limpio (`git status --porcelain` sin salida) |
+| HEAD del documento R1 | `53cfd6f28a169f2e71edf557e66b7c4f5ea17a1d` |
+| Padre de R1 | `f17246e0abf5878f3ad6f2df84d30bb76a351542` (Fase B) |
+| Abuelo de R1 | `e83ad182483c9ec2eb446b757ee53ea8496d31a2` (Fase A) |
+| Remoto | `origin/main` = `53cfd6f…`, alineado con el HEAD local (verificado por la auditoría) |
+| Árbol de trabajo | Limpio (`git status --porcelain` sin salida) durante la auditoría |
+| Publicación de R1 | El propietario realizó personalmente el commit y push del documento; no se atribuye la operación a terceros |
 | DEC-01 a DEC-08 | **APPROVED**, sin modificaciones; no se reabren ni reinterpretan |
 
 ---
@@ -94,10 +98,11 @@
 2. Con posterioridad, el propietario del proyecto realizó personalmente el commit y push, generando `f17246e0…`.
 3. La auditoría independiente verificó el commit publicado, su padre (`e83ad182…`) y el contenido exacto de los seis archivos del alcance.
 4. El contenido publicado coincide con el alcance auditado; no hay cambios adicionales ocultos y el árbol está limpio.
+5. Posteriormente, el propietario publicó el presente documento R1 mediante el commit `53cfd6f…`, hijo de `f17246e…`. La auditoría de R1 verificó HEAD local y remoto alineados en `53cfd6f…` y árbol limpio. Este hecho se registra como continuación de la misma secuencia temporal, no como una operación ajena.
 
 ### 4.2 Resolución
 
-**[APROBADO POR LOS HECHOS VERIFICADOS]** No existe incidencia de autorización: el commit y push fueron realizados por el propietario del proyecto. No se atribuye la operación a terceros ni se especula sobre su ejecución. La diferencia es únicamente temporal entre el informe y el estado final.
+**[HECHO VERIFICADO]** No existe incidencia de autorización: el commit y push de Fase B y la publicación posterior de R1 fueron realizados por el propietario del proyecto. No se atribuye la operación a terceros ni se especula sobre su ejecución. La diferencia es únicamente temporal entre el informe y el estado final.
 
 **Clasificación: aclaración documental cerrada. Estado R2: CLOSED.**
 
@@ -128,12 +133,14 @@ JSON Schema 2020-12 puede exigir tipo, `minItems` y `uniqueItems` (ya implementa
 
 ### 5.3 Decisión recomendada (no aprobada)
 
+**Autoridad normativa (AUD-F-3):** la regla de permutación exacta aparece en `docs/aud04b_model_provenance_v4_design.md` §5.3, documento que se identifica a sí mismo como "propuesta documental para revisión humana; no implementada ni aprobada". La regla **no forma parte de DEC-01 a DEC-08**: el registro de aprobación R2 limita el estado `APPROVED` a esas ocho decisiones y conserva las etiquetas de propuesta del diseño como historial documental. El plan R1.1 contempla V4-U06 en su §6.1 con fase B, pero el propio plan declara que no autoriza implementación. En consecuencia, la corrección en `validate_manifest_v4` **requiere autorización explícita del propietario**, porque Fase B ya fue auditada y aceptada. No se afirma que la regla tenga estatus de DEC aprobada.
+
 **[RECOMENDACIÓN TÉCNICA]**
 
 1. **Schema:** mantener `minItems: 1` y `uniqueItems: true` en `classes` y `class_order`. No inventar restricciones adicionales en el schema.
 2. **Validador semántico v4:** incorporar en `validate_manifest_v4` la comprobación de que, tras la normalización documentada en §5.3, `class_order` es una permutación exacta de `classes`. Rechazar booleanos, `null`, strings, números fraccionarios, NaN/infinitos y duplicados; `1.0` y `1` se tratan como el mismo valor.
 3. **Fase responsable:** Fase B (es donde el plan sitúa V4-U06). Como Fase B ya fue aceptada, cualquier cambio requiere **[PENDIENTE DE APROBACIÓN]** del propietario.
-4. **No se requiere una DEC nueva**: la regla ya está en la especificación 4.0.0. Sí se requiere autorización para modificar una fase cerrada y ajustar el plan R1.1.
+4. **No se requiere una DEC nueva**: la regla ya está en el diseño v4 §5.3 y en V4-U06 del plan; no por ello tiene estatus de DEC aprobada. La autorización exigida es la del propietario para modificar una fase cerrada y ajustar el plan R1.1.
 
 ### 5.4 Criterio de aceptación verificable
 
@@ -151,7 +158,7 @@ JSON Schema 2020-12 puede exigir tipo, `minItems` y `uniqueItems` (ya implementa
 
 ### 6.1 Principio general
 
-**[APROBADO]** La spec v4 §9.2 declara `label_purge_satisfied`, los tres `leakage_checks` y `test_evaluated_once` como resultados derivados o de evaluación, **excluidos del fingerprint** y que **deben ser `true`** para admitir el manifiesto. Validar el tipo booleano (Fase B) **no demuestra** que el hecho ocurrió. La demostración pertenece a la verificación de relaciones con datos declarados (Fase D) o a la verificación de ejecución (S6).
+**[REQUISITO DE DISEÑO / CRITERIO DE PLAN]** La spec v4 §9.2 declara `label_purge_satisfied`, los tres `leakage_checks` y `test_evaluated_once` como resultados derivados o de evaluación, **excluidos del fingerprint** y que **deben ser `true`** para admitir el manifiesto. Este contenido procede de un documento de diseño rotulado como propuesta no aprobada y del plan R1.1; **no ha sido aprobado mediante DEC-01 a DEC-08**. La exclusión de resultados derivados del fingerprint es coherente con DEC-06 (allowlist y exclusión de resultados derivados), y la condición de purga por fuente que puede respaldar `label_purge_satisfied`/`purge_satisfied` está amparada por DEC-08; ninguna de esas DEC aprueba por sí sola el valor `true` de los tres flags. Validar el tipo booleano (Fase B) **no demuestra** que el hecho ocurrió. La demostración pertenece a la verificación de relaciones con datos declarados (Fase D) o a la verificación de ejecución (S6).
 
 No se debe convertir automáticamente ningún flag en `true` ni aceptar una afirmación sin evidencia.
 
@@ -166,12 +173,14 @@ No se debe convertir automáticamente ningún flag en `true` ni aceptar una afir
 | Fase responsable | D (estructura/relaciones declaradas). Evidencia efectiva sobre datos originales: verificador posterior, fuera de S1. |
 | Pruebas | Casos límite `gap_source == max(H,E)`, mayor y menor; ejemplo con filas descartadas; bandera `false`. |
 
+**Nota AUD-F-4 — distinción pendiente:** `label_purge_satisfied` y `leakage_checks.purge_satisfied` se relacionan con la condición de purga, pero el diseño v3 §5.6 les asigna naturaleza distinta: el primero está "calculado, no declarado a mano" y el segundo es "verificado por el validador". Este documento **no asume que sean intercambiables ni que tengan necesariamente idéntico alcance**. Fase D deberá determinar: (1) si ambos campos son verificaciones redundantes; (2) si uno es un resultado agregado y el otro una comprobación específica; (3) qué componente calcula cada uno; (4) cómo se evita una contradicción entre ambos; y (5) qué pruebas demostrarán su consistencia. Si esa distinción exige cambiar el contrato normativo, queda pendiente de una decisión aprobada; no se inventa aquí una interpretación definitiva.
+
 ### 6.3 `validation.leakage_checks.disjoint` y `.purge_satisfied`
 
 | Aspecto | Resolución |
 |---|---|
 | Naturaleza | **Derivados / verificados por el validador** (v3 §5.6) y resultados derivados en v4 §9.2. |
-| Componente que los determina | Fase D: orden y no solapamiento de intervalos declarados para `disjoint`; misma fórmula de purga para `purge_satisfied`. |
+| Componente que los determina | Fase D: orden y no solapamiento de intervalos declarados para `disjoint`; comprobación de purga para `purge_satisfied`, sin presumir que sea idéntica a `label_purge_satisfied` (véase la nota AUD-F-4 en §6.2). |
 | Evidencia | Límites `row_start/row_end` y `source_position_start/end` declarados, con aritmética reproducible. |
 | Cuándo rechazar | Valor `false`; valor `true` con solapamiento declarado, orden invertido o purga insuficiente. |
 | Fase responsable | D. La correspondencia con el dataset original queda para el verificador posterior (R1.2 del plan). |
@@ -209,6 +218,8 @@ No se debe convertir automáticamente ningún flag en `true` ni aceptar una afir
 | `leakage_checks.labels_within_partition` | Derivado con datos | D (solo declaración) | Verificador con labels/dataset |
 | `test_evaluated_once` | Evidencia de ejecución | B/D (valor `true`) | S6 / verificador independiente |
 
+Nota: la distinción entre `label_purge_satisfied` y `leakage_checks.purge_satisfied` permanece pendiente de resolución técnica en Fase D (AUD-F-4).
+
 **Estado R4: DEFERRED.** La parte de evidencia de ejecución queda fuera de A–G y no se activa sin autorización.
 
 ---
@@ -240,6 +251,12 @@ No se introducen correcciones de código.
 | F-4 — semiabertura de posiciones | Ya asignada por el plan | D | Rechazo de límites invertidos/negativos/solapados | **DEFERRED** |
 | F-5 — prefijo de ruta en errores no-dict | Mejora no bloqueante | B/G (tras autorización) | Todos los errores con prefijo `$`; mensajes v3 intactos | **DEFERRED** |
 | F-6 — históricos | No corregir en B | Fuera de A–G | Sin cambios en el validador histórico | **NOT IN SCOPE** |
+| AUD-F-1 | Etiquetas normativas corregidas: `[APROBADO]` restringido a DEC-01…08; requisitos de diseño rotulados por separado | Corrección documental R1.1 | §6.1 y convención de calificación | **CLOSED** |
+| AUD-F-2 | Estado Git actualizado: R1 publicado en `53cfd6f…`; HEAD/remoto alineados; sin atribución a terceros | Corrección documental R1.1 | §2, §4.1 y §11.8 | **CLOSED** |
+| AUD-F-3 | Autoridad normativa de V4-U06 aclarada: diseño no aprobado, no es DEC; requiere autorización del propietario | Corrección documental R1.1 | §5.3 y §5.4; V4-U06 sigue `PENDING APPROVAL` | **CLOSED** |
+| AUD-F-4 | Distinción documentada entre los dos flags de purga; resolución semántica diferida a D | D | §6.2/§6.3 y nota en §6.6; definir redundancia, alcance, componente y pruebas | **DEFERRED** |
+
+`CLOSED` se refiere únicamente a la corrección documental. No cierra la implementación de V4-U06 ni la resolución técnica de la duplicidad de flags.
 
 ---
 
@@ -265,7 +282,7 @@ No se introducen correcciones de código.
 | Aceptación de CP-B no presentada como autorización de Fase C | Confirmado: Fase C sigue BLOQUEADA |
 | Recomendaciones no presentadas como decisiones aprobadas | Confirmado: marcadas `[RECOMENDACIÓN TÉCNICA]` / `[PENDIENTE DE APROBACIÓN]` |
 | Nombres de fases y V4-Uxx correctos | Confirmado contra plan R1.1 y diseño v4 |
-| Archivos modificados | Solo el presente documento |
+| Archivos modificados | Solo el presente documento; el commit de publicación `53cfd6f…` contiene únicamente `docs/r13_decision_resolution_r1.md` |
 
 ---
 
@@ -278,7 +295,7 @@ No se introducen correcciones de código.
 5. **Matriz de trazabilidad:** sección 8.
 6. **Modificaciones futuras al plan R1.1:** sección 9, todas pendientes de autorización.
 7. **Confirmación:** no se modificó código, schema, tests, fixtures, dependencias, modelos ni datasets; no se leyeron ni procesaron los Parquet protegidos.
-8. **Confirmación Git:** no se crearon commits ni se hizo push; HEAD y remoto permanecen en `f17246e0…`.
+8. **Confirmación Git:** el propietario publicó el documento R1 mediante el commit `53cfd6f28a169f2e71edf557e66b7c4f5ea17a1d` y el correspondiente push; la auditoría verificó HEAD local y remoto alineados en `53cfd6f…` y árbol limpio. La redacción original de este apartado describía el estado anterior a esa publicación y ha sido corregida en R1.1.
 
 **Clasificación: COMPLETADO.** La resolución distingue lo aprobado, lo aceptado por auditoría, lo recomendado técnicamente y lo que requiere aprobación del propietario. **Fase C permanece BLOQUEADA hasta autorización explícita.**
 
