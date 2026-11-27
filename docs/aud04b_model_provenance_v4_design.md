@@ -81,7 +81,7 @@ Las fixtures históricas deben permanecer como casos 3.0.0. Las futuras fixtures
 
 ## 4. Contrato del manifiesto 4.0.0
 
-**CAMBIO PROPUESTO.** El manifiesto mantiene las áreas del contrato v3: identidad, productor, datos, target, features, training, validation, calibration, artifacts, metrics y extensions. Su esquema futuro debe ser JSON Schema 2020-12, con objetos núcleo cerrados. Los cambios siguientes son parte de esta propuesta y todavía no existen en el JSON Schema del commit base.
+**CAMBIO PROPUESTO.** El manifiesto mantiene las áreas del contrato v3: identidad, productor, datos, target, features, training, validation, calibration, artifacts, metrics y extensions. Su esquema futuro debe ser JSON Schema 2020-12, con objetos núcleo cerrados. El esquema histórico de referencia es `src/tradingai/schemas/manifest_v3.json`. Los cambios siguientes son parte de esta propuesta y todavía no existen en ese JSON Schema del commit base.
 
 Para propiedades de 3.0.0 no cambiadas expresamente en este documento, 4.0.0 conserva el tipo, nulabilidad, restricciones y obligatoriedad de `manifest_v3.json`. El esquema 4.0.0 debe seguir rechazando propiedades desconocidas en objetos núcleo. Las diferencias de esquema aquí propuestas son: `schema_version` constante `4.0.0`; incorporación obligatoria de `source_position_start` y `source_position_end` a cada partición; `shared_with` ausente en train, validation y test, y obligatorio e igual a `validation` solo para calibration; validación de que, con `calibration.mode = in_pipeline`, `base_model_id = model_id` y los hashes base correspondan a los artefactos del mismo manifiesto, y que con `external_run` identifique el modelo base distinto cuyos hashes se declaran; restricciones reforzadas de clases, eventos y sidecars; y campos de entorno añadidos/requeridos según §9.3. `base_model_id` y ambos hashes base siguen siendo obligatorios y con formato válido en ambos modos. Cualquier otra diferencia debe añadirse explícitamente antes de aprobar el contrato.
 
@@ -105,7 +105,9 @@ Los límites de cada partición son semiabiertos:
     P = [row_start, row_end)
     S = [source_position_start, source_position_end)
 
-El límite final es exclusivo. Si la última fila conservada de una partición tiene posición fuente p, source_position_end = p + 1. Las filas filtradas dentro de los límites pueden hacer que el ancho del intervalo fuente sea mayor que n_rows.
+El límite final es exclusivo. Para una partición no vacía, si la secuencia de filas conservadas tiene posiciones fuente `s_0, …, s_(n-1)`, se exige `source_position_start = s_0` y `source_position_end = s_(n-1) + 1`. Las filas filtradas dentro de los límites pueden hacer que el ancho del intervalo fuente sea mayor que n_rows.
+
+**Invariantes de la secuencia:** las posiciones `s_i` son enteros no negativos, estrictamente crecientes (`s_(i+1) > s_i`) y, por ello, únicas. No se renumeran tras filtrar filas. Calibration compartida debe usar exactamente la misma secuencia de posiciones que validation.
 
 ### 4.2 Gaps, purga y embargo
 
@@ -141,9 +143,9 @@ Con H=3 y E=2, la frontera satisface la fórmula propuesta. El gap de cero filas
 
 ### 4.3 Qué puede verificar S1
 
-**ACLARACIÓN.** Con límites y hashes declarados, S1 puede comprobar tipos, límites semiabiertos, orden entre rangos declarados, aritmética de conteos, fórmula de gap basada en límites declarados, relaciones entre hashes declarados y el formato de los digests.
+**ACLARACIÓN.** Con límites y hashes declarados, S1 puede comprobar tipos, límites semiabiertos, que `source_position_start < source_position_end`, orden entre rangos declarados, aritmética de conteos, fórmula de gap basada en límites declarados, relaciones entre hashes declarados y el formato de los digests. Si recibe también la secuencia por fila, puede comprobar sobre esa entrada que las posiciones sean enteros no negativos, estrictamente crecientes y únicas, y que los límites declarados coincidan con el primer valor y el último más uno.
 
-S1 no demuestra que las posiciones individuales, timestamps, etiquetas o conteos correspondan al dataset original. Para esa demostración, un verificador posterior debe obtener los bytes del dataset identificado por dataset_sha256, reconstruir el orden de las filas fuente y aplicar las reglas de filtrado. Debe recalcular posiciones, índices y límites. Un digest bien formado no demuestra por sí solo que su preimagen sea correcta.
+El manifiesto S1 solo contiene límites y `index_sha256`, no la secuencia de posiciones por fila. Por ello, a partir del manifiesto y su digest únicamente, S1 no puede demostrar monotonía, unicidad ni igualdad efectiva entre los límites declarados y los extremos de la secuencia; tampoco demuestra que posiciones, timestamps, etiquetas o conteos correspondan al dataset original. Para esa verificación efectiva, un verificador posterior debe obtener los bytes del dataset identificado por `dataset_sha256`, reconstruir el orden de las filas fuente y aplicar las reglas de filtrado. Debe comprobar las invariantes de la secuencia y recalcular posiciones, índices, límites y digest. Un digest bien formado no demuestra por sí solo que su preimagen sea correcta.
 
 ## 5. Identidad de índices y datos temporales
 
@@ -155,6 +157,7 @@ S1 no demuestra que las posiciones individuales, timestamps, etiquetas o conteos
 
 - row es el ordinal global de la fila en el dataset filtrado y etiquetado.
 - source_position es el ordinal de la fila en la serie OHLCV original.
+- En la secuencia de cada partición, source_position es estrictamente creciente y único. El primer valor debe igualar source_position_start y el último valor más uno debe igualar source_position_end.
 - timestamp_utc es el instante normalizado según §5.2.
 - label es una clase permitida de target.classes.
 
@@ -453,13 +456,15 @@ Los siguientes son criterios para una futura implementación; no son pruebas eje
 | V4-U11 | Se recalculan index_sha256, partition_manifest_sha256, calibration_input_sha256 y event_sha256 desde sus preimágenes independientes. |
 | V4-U12 | Los wrappers públicos mantienen list[str] y sus mensajes históricos. |
 | V4-U13 | En la primera versión 4.0.0, extensions={} se acepta y cualquier namespace no vacío se rechaza; el cambio no altera el fingerprint. |
+| V4-U14 | Con una secuencia por fila disponible, posiciones fuente negativas, repetidas o no crecientes se rechazan, y los límites declarados deben coincidir con el primer valor y el último más uno. Sin esa secuencia, S1 valida solo estructura y aritmética de los límites; no afirma haber verificado sus valores reales. |
+| V4-U15 | Un verificador posterior reconstruye las posiciones desde el dataset original, aplica las reglas de filtrado y recalcula secuencia, límites e index_sha256; no forma parte de la validación S1 basada solo en manifiesto. |
 
 ## 12. Trazabilidad R13-DESIGN-R3.2
 
 | ID | Decisión | Origen R3.2 | Sección anterior | Sección 4.0.0 | Cambio requerido | Futura prueba de aceptación | Clase / estado |
 |---|---|---|---|---|---|---|---|
 | V4-D01 | 3.0.0 congelado y dispatch por versión | R3.2-02 | §5.1, §14 | §§2–3 | Validador/schema separado por versión | V4-U01 | CAMBIO PROPUESTO; pendiente |
-| V4-D02 | Ordinal fuente antes del filtrado | R3.2-01 | §5.6 | §4.1 | Añadir límites y secuencia de posiciones fuente | V4-U02 | CAMBIO PROPUESTO; pendiente |
+| V4-D02 | Ordinal fuente antes del filtrado, secuencia estricta y límites derivados de sus extremos | R3.2-01 | §5.6 | §§4.1, 4.3, 5.1 | Añadir límites; definir unicidad/monotonía y distinguir verificación estructural de reconstrucción de datos | V4-U02/U14/U15 | CAMBIO PROPUESTO; pendiente |
 | V4-D03 | Gap de filas distinto de gap fuente | R3.2-01 | §5.6 | §4.2 | Calcular ambos; definir rows_between | V4-U02 | ACLARACIÓN y CAMBIO PROPUESTO |
 | V4-D04 | Purga gap_source >= max(H,E) | R3.2-01 | §5.6 | §4.2 | Aclarar que H/E son cotas del mismo hueco | V4-U03 | CAMBIO PROPUESTO; pendiente |
 | V4-D05 | Calibración solo compartida con validation | R3.2-03 | §§5.6–5.7 | §6 | Restringir shared_with y fit_partition | V4-U04 | CAMBIO PROPUESTO; pendiente |
@@ -483,7 +488,7 @@ Las siguientes decisiones están documentadas como propuestas y no se consideran
 3. Aprobar la semántica de embargo_rows como cota sobre el mismo gap y la fórmula max(H,E).
 4. Limitar S1 a calibration compartida con validation.
 5. Añadir las transiciones a rejected y deprecated → revoked.
-6. Adoptar evidence y sidecar Ed25519 según esta propuesta, incluidos los nueve bytes firmados.
+6. Adoptar evidence y sidecar Ed25519 según esta propuesta, incluidos los nueve campos firmados.
 7. Aprobar allowlist, reglas de environment y extensions={} para 4.0.0 inicial; definir el contrato de namespaces antes de permitir extensiones no vacías.
 8. Resolver el catálogo de reason_code.
 
