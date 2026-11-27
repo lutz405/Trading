@@ -11,6 +11,8 @@ from typing import Any
 
 import rfc8785
 
+from . import provenance_v4
+
 # Manifest version dispatch (Fase A)
 # ---------------------------------
 MANIFEST_VERSION_V3 = '3.0.0'
@@ -535,9 +537,10 @@ def validate_manifest(manifest: dict[str, Any]) -> list[str]:
     """Validate a manifest dict through explicit schema_version dispatch.
 
     - '3.0.0': frozen historical validator, with unchanged checks and messages.
-    - '4.0.0': typed internal error converted to the historical list[str]
-      contract; Fase B pending. No partial validation, no 3.0.0 defaults and
-      no call to the 3.0.0 validator.
+    - '4.0.0': delegated to the independent 4.0.0 structural validator; the
+      typed internal "not implemented" signal from the Fase A dispatcher is
+      the hand-off point. No partial validation, no 3.0.0 defaults and no call
+      to the 3.0.0 validator.
     - missing/unknown/malformed version: explicit fail-closed rejection.
     Public name, signature and return type are preserved.
     """
@@ -545,6 +548,8 @@ def validate_manifest(manifest: dict[str, Any]) -> list[str]:
         return [_MANIFEST_NOT_OBJECT_MESSAGE]
     try:
         version = _dispatch_manifest_version(manifest)
+    except ManifestVersionNotImplementedError:
+        return provenance_v4.validate_manifest_v4(manifest)
     except ManifestVersionError as exc:
         return [str(exc)]
     if version == MANIFEST_VERSION_V3:

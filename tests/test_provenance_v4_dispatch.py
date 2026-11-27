@@ -10,7 +10,7 @@ import inspect
 
 import pytest
 
-from tradingai.ml import provenance
+from tradingai.ml import provenance, provenance_v4
 from tradingai.ml.provenance import (
     MANIFEST_VERSION_V3,
     MANIFEST_VERSION_V4,
@@ -82,11 +82,20 @@ class TestV3RoutePreserved:
         assert any('source_position_start' in e for e in errors)
 
 
-class TestV4Rejection:
-    def test_v4_returns_explicit_pending_message(self):
+class TestV4Delegation:
+    """Fase B replaced the Fase A pending error with real v4 validation."""
+
+    def test_v4_delegates_to_v4_validator(self, monkeypatch):
+        calls = []
+
+        def _spy(manifest):
+            calls.append(manifest)
+            return []
+
+        monkeypatch.setattr(provenance_v4, 'validate_manifest_v4', _spy)
         manifest = {'schema_version': MANIFEST_VERSION_V4}
-        assert validate_manifest(manifest) == [V4_PENDING_MESSAGE]
-        assert 'Fase B' in V4_PENDING_MESSAGE
+        assert validate_manifest(manifest) == []
+        assert calls == [manifest]
 
     def test_v4_does_not_call_any_v3_validator(self, monkeypatch):
         monkeypatch.setattr(provenance, '_validate_manifest_v3', _forbid('_validate_manifest_v3'))
@@ -106,7 +115,11 @@ class TestV4Rejection:
             'model_id': 'invalid',
             'unknown_field': 'value',
         }
-        assert validate_manifest(manifest) == [V4_PENDING_MESSAGE]
+        errors = validate_manifest(manifest)
+        assert isinstance(errors, list) and errors
+        assert all(isinstance(error, str) for error in errors)
+        assert V4_PENDING_MESSAGE not in errors
+        assert any('model_id' in error for error in errors)
 
     def test_v4_dispatch_typed_internal_error(self):
         with pytest.raises(ManifestVersionNotImplementedError, match='Fase B'):
@@ -122,8 +135,9 @@ class TestV4Rejection:
         }
         before = dict(manifest)
         errors = validate_manifest(manifest)
-        assert errors == [V4_PENDING_MESSAGE]
-        assert len(errors) == 1
+        assert errors
+        assert V4_PENDING_MESSAGE not in errors
+        assert 'Invalid model_id format' not in errors  # v3 body message never applied
         assert manifest == before
 
 
