@@ -1,8 +1,9 @@
 # R13-IMPLEMENTATION-PLAN-R1 — Plan técnico de implementación de provenance 4.0.0
 
 **Estado del documento:** PLAN TÉCNICO. No implementa nada. No autoriza implementación.
-**Fecha de emisión:** 2026-11-27. **Revisión actual:** R13-IMPLEMENTATION-PLAN-R1.1.
+**Fecha de emisión:** 2026-11-27. **Revisión actual:** R13-IMPLEMENTATION-PLAN-R1.2 (cierre documental de V4-U06 / DEC-09).
 **Base actual (R1.1):** commit `927fe32d95ca67a8148c65fbf7f7268f2b84eab1`, con `main` local y remoto alineados y árbol limpio.
+**Cierre V4-U06:** implementación publicada en `99fdbbca72613ca6a2963b3ba22df7b016aff0bc`; dictamen independiente `ACCEPTED`. Véase §13.
 **Historial:** el plan R1 se emitió sobre `274f4cc0f909e360fe455c9d49f81a1a8745cd4a` y posteriormente se publicó como `927fe32d…`. El §2 y el §11 conservan ese estado histórico; el §12 registra la revisión R1.1.
 **Clasificación de la revisión R1.1:** **COMPLETADO** (exclusivamente documental; sin código, schemas, tests, fixtures, dependencias, modelos ni datasets modificados; sin pruebas ejecutadas; sin commits ni push).
 
@@ -59,7 +60,7 @@
 - Líneas 39–48: matriz con `APPROVED` en las ocho filas.
 - Líneas 52–146: cada `### DEC-0x` con `**Estado:** APPROVED.` y `**Decisión aprobada:**`.
 - Líneas 154–163: tabla "Aprobadas" con las ocho decisiones `APPROVED`; "Rechazadas: Ninguna".
-- **H/P** — DEC-09 fue registrada posteriormente por el propietario el 2026-11-27 (`R13-DEC-09-REGISTRATION-R1`) para V4-U06. El estado normativo de V4-U06 es `APPROVED`; su implementación sigue `PENDING AUTHORIZATION` y la reapertura de Fase B no está autorizada. Esta distinción se refleja en la fila V4-U06 de §6.1.
+- **H/P** — DEC-09 fue registrada posteriormente por el propietario el 2026-11-27 (`R13-DEC-09-REGISTRATION-R1`) para V4-U06. En R1.1 su implementación figuraba como `PENDING AUTHORIZATION` y la reapertura de Fase B como no autorizada; ese es el estado histórico de esta sección. En R1.2, tras autorización técnica y auditoría, pasó a `ACCEPTED` (véase §13 y la fila V4-U06 de §6.1).
 - Líneas 171–177: aplazamientos.
 - Líneas 35 y 190: la aprobación **no autoriza** modificar schema/código/tests/fixtures/loaders/registry/writer/inferencia/S2.
 
@@ -350,7 +351,7 @@ Archivo: `src/tradingai/ml/provenance.py` (495 líneas; encabezado: "Provenance 
 | V4-U03 | Purga en todas las fronteras con `max(H,E)`. | D | Parcial: solo `rows_between_partitions >= horizon` en v3. |
 | V4-U04 | Calibration compartida con equivalencia completa; sin frontera propia. | D | Parcial: solo `row_start/row_end`. |
 | V4-U05 | Timestamps duplicados/desordenados, >9 decimales y zona desconocida rechazados; UTC sin redondeo. | C/D | No implementado en provenance; parcial en `pipeline._validate_temporal`. |
-| V4-U06 | Clases duplicadas, booleanos, strings y etiquetas fuera de `classes` rechazados; `class_order` debe ser permutación exacta de `classes` (DEC-09). | B (prevista) | **Aprobación normativa:** APPROVED (DEC-09, 2026-11-27, registro `R13-DEC-09-REGISTRATION-R1`). **Implementación:** PENDING AUTHORIZATION. **Reapertura de Fase B:** NOT AUTHORIZED. Regla vigente pero todavía no implementada; la aprobación no autoriza cambios de código ni de tests. |
+| V4-U06 | Clases duplicadas, booleanos, strings y etiquetas fuera de `classes` rechazados; `class_order` debe ser permutación exacta de `classes` (DEC-09). | B (reapertura autorizada y cerrada) | **Aprobación normativa:** APPROVED (DEC-09, 2026-11-27). **Implementación:** ACCEPTED (commit `99fdbbca72613ca6a2963b3ba22df7b016aff0bc`; informe `R13-IMPLEMENTATION-V4-U06-DEC-09-R1`). **Auditoría:** ACCEPTED (`R13-AUDIT-IMPLEMENTATION-V4-U06-DEC-09-R1`, AUD-U06-01…16 PASS). **Alcance:** solo V4-U06; Fase C sigue BLOCKED. Véase §13. |
 | V4-U07 | Transiciones fuera de tabla, estados repetidos y salidas de terminales rechazados. | E | No implementado. |
 | V4-U08 | Evidence con campos desconocidos o tipos incorrectos rechazada. | B/E | No implementado (`evidence` solo objeto/null). |
 | V4-U09 | Sidecars ausentes/duplicados/mal asociados rechazados; sin afirmar firma verificada. | F | No implementado. |
@@ -541,3 +542,77 @@ Encabezado, `§1` (ítems 7 y 9), `§3.5` (último punto), `§3.11` (nueva), `§
 | Clasificación | **COMPLETADO**; la implementación sigue **BLOQUEADA** hasta autorización explícita. |
 
 **Fin de R13-IMPLEMENTATION-PLAN-R1.1.**
+
+---
+
+## 13. R13-IMPLEMENTATION-PLAN-R1.2 — Cierre documental de V4-U06 / DEC-09
+
+### 13.1 Hechos de cierre
+
+| Elemento | Registro |
+|---|---|
+| Decisión normativa | DEC-09: APPROVED, 2026-11-27, autoridad: propietario del proyecto (`R13-DEC-09-REGISTRATION-R1`) |
+| Regla aprobada | `class_order` debe ser permutación exacta de `classes`; `1 ≡ 1.0`; se rechazan booleanos, duplicados, tipos inválidos y enteros fuera del rango seguro; error en `$.target.class_order` |
+| Implementación | Informe `R13-IMPLEMENTATION-V4-U06-DEC-09-R1`; commit `99fdbbca72613ca6a2963b3ba22df7b016aff0bc`, hijo de `4b2013136c333f1185a46791f339ce2fee64a208` |
+| Archivos de código publicados | `src/tradingai/ml/provenance_v4.py` y `tests/test_provenance_v4_schema.py`; 148 inserciones, 0 eliminaciones |
+| Auditoría independiente | Informe `R13-AUDIT-IMPLEMENTATION-V4-U06-DEC-09-R1`; dictamen **ACCEPTED**; sin hallazgos CRITICAL, HIGH, MEDIUM ni LOW |
+| Estado de V4-U06 | **ACCEPTED** (implementado, verificado y auditado) |
+
+### 13.2 Criterios de auditoría AUD-U06-01 a AUD-U06-16
+
+| ID | Criterio | Resultado |
+|---|---|---|
+| AUD-U06-01 | Autoridad normativa DEC-09 | PASS |
+| AUD-U06-02 | Alcance exacto de archivos | PASS |
+| AUD-U06-03 | Normalización `1` / `1.0` | PASS |
+| AUD-U06-04 | Rechazo de booleanos | PASS |
+| AUD-U06-05 | Unicidad de `classes` | PASS |
+| AUD-U06-06 | Unicidad de `class_order` | PASS |
+| AUD-U06-07 | Igualdad exacta de conjuntos | PASS |
+| AUD-U06-08 | Orden libre | PASS |
+| AUD-U06-09 | Rango seguro | PASS |
+| AUD-U06-10 | Tipos inválidos y robustez | PASS |
+| AUD-U06-11 | Ruta de error exacta `$.target.class_order` | PASS |
+| AUD-U06-12 | Ausencia de mutación | PASS |
+| AUD-U06-13 | Integración con schema y validador | PASS |
+| AUD-U06-14 | Preservación exacta de v3 | PASS |
+| AUD-U06-15 | Suite de pruebas y lint | PASS |
+| AUD-U06-16 | Ausencia de cambios fuera de alcance | PASS |
+
+### 13.3 Verificación y pruebas registradas
+
+| Verificación | Resultado |
+|---|---|
+| `tests/test_provenance_v4_schema.py` | 37 pruebas superadas |
+| `tests/test_provenance_v4_dispatch.py` | 29 pruebas superadas |
+| Regresión v3 (`tests/test_provenance.py`) | 116 pruebas superadas |
+| Suite completa | 507 pruebas superadas |
+| Ruff sobre los archivos modificados | Sin diagnósticos |
+| `git diff --check` | exit `0` |
+| `_validate_manifest_v3` | Cuerpo ejecutable idéntico al de la base `4b201313…` |
+| Advertencia anyio | `PytestRemovedIn10Warning`, preexistente y no bloqueante |
+
+### 13.4 Observaciones INFO no bloqueantes
+
+1. Cuando la invalidez proviene de `classes`, el error se emite con prefijo `$.target.class_order`, cumpliendo DEC-09 aunque el origen sea el otro array.
+2. Si `target` no es objeto, no se emite error DEC-09 específico; el schema reporta la estructura inválida.
+3. En casos como duplicados pueden coexistir el error del schema y el error DEC-09; no se ocultan ni contradicen.
+
+Ninguna requirió corrección y ninguna impidió el dictamen `ACCEPTED`.
+
+### 13.5 Trazabilidad y alcance del cierre
+
+`DEC-09 (APPROVED)` → `V4-U06` → `provenance_v4.py` / `test_provenance_v4_schema.py` → commit `99fdbbca…` → informe de implementación → auditoría independiente `ACCEPTED` → cierre documental R1.2.
+
+La aceptación cubre **exclusivamente V4-U06 / DEC-09**. No cambia el estado de DEC-01 a DEC-08 ni de otros criterios V4-Uxx. No declara completadas Fase C, D, E, F ni G: **Fase C continúa BLOCKED** y cualquier avance requiere autorización explícita separada.
+
+### 13.6 Estado documental
+
+| Ítem | Resultado |
+|---|---|
+| HEAD inicial y final de esta corrección | `99fdbbca72613ca6a2963b3ba22df7b016aff0bc` (idéntico; sin commits nuevos) |
+| Documentos modificados | `docs/aud04b_model_provenance_v4_implementation_plan_r1.md` y `docs/r13_decision_resolution_r1.md` |
+| Cambios de código en esta tarea | Ninguno |
+| Publicación | Sin push; el propietario publicará posteriormente |
+
+**Fin de R13-IMPLEMENTATION-PLAN-R1.2.**

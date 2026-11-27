@@ -1,9 +1,10 @@
 # R13-DECISION-RESOLUTION-R1 — Resolución documental de hallazgos de Fase B
 
-**Estado del documento:** resolución documental. No modifica código, schemas, tests, dependencias, decisiones normativas ni el plan R1.1.
-**Revisión:** R1.1 (correcciones derivadas de `R13-AUDIT-DECISION-RESOLUTION-R1`, dictamen `ACCEPTED WITH FINDINGS`).
+**Estado del documento:** resolución documental. No modifica código, schemas, tests, dependencias ni decisiones normativas.
+**Revisión:** R1.2 (cierre documental de V4-U06 / DEC-09; R1.1 conserva las correcciones de `R13-AUDIT-DECISION-RESOLUTION-R1`, dictamen `ACCEPTED WITH FINDINGS`).
 **Fecha:** 2026-11-27.
-**Base:** el presente documento fue publicado por el propietario en el commit `53cfd6f28a169f2e71edf557e66b7c4f5ea17a1d`, hijo de `f17246e0abf5878f3ad6f2df84d30bb76a351542` (Fase B). La auditoría verificó HEAD local y remoto alineados en `53cfd6f…` y árbol de trabajo limpio.
+**Base histórica R1.1:** el documento fue publicado por el propietario en el commit `53cfd6f28a169f2e71edf557e66b7c4f5ea17a1d`, hijo de `f17246e0abf5878f3ad6f2df84d30bb76a351542` (Fase B). La auditoría verificó HEAD local y remoto alineados en `53cfd6f…` y árbol de trabajo limpio.
+**Cierre V4-U06:** implementación publicada en `99fdbbca72613ca6a2963b3ba22df7b016aff0bc`; dictamen independiente `ACCEPTED`. Véase §12.
 
 **Convención de estado:**
 
@@ -30,10 +31,11 @@
 
 1. **[ACEPTADO POR AUDITORÍA] — R1:** Fase B fue auditada con dictamen **ACCEPTED WITH FINDINGS**; CP-B-01 a CP-B-10 resultaron **PASS**; no hay hallazgos Critical, High ni Medium. La aceptación de CP-B **no autoriza** Fase C, que permanece **BLOQUEADA**.
 2. **[CLOSED] — R2:** la diferencia entre el informe inicial de implementación y el estado auditado se debe a que el propietario realizó personalmente el commit y push. Se registra como aclaración documental cerrada, sin calificarla como incidencia de autorización ni atribuir acciones a terceros.
-3. **[CLOSED / PENDING AUTHORIZATION] — R3:** la permutación exacta entre `class_order` y `classes` fue aprobada por el propietario el 2026-11-27 como **DEC-09** (V4-U06). La aprobación normativa queda resuelta; la implementación en `validate_manifest_v4` sigue pendiente de autorización técnica y la reapertura de Fase B no está autorizada.
+3. **[CLOSED / IMPLEMENTED / ACCEPTED] — R3:** la permutación exacta entre `class_order` y `classes` fue aprobada por el propietario el 2026-11-27 como **DEC-09** (V4-U06). Una autorización técnica posterior permitió la reapertura limitada de Fase B; la implementación se publicó en el commit `99fdbbca…` y la auditoría independiente emitió **ACCEPTED**. Véase §12.
 4. **[DEFERRED] — R4:** los tres flags son resultados derivados o evidencia de ejecución. Su tipo/estructura se validó en B; su veracidad debe demostrarse en Fase D o en el verificador posterior (S6). No se convierten automáticamente en `true`.
 5. **[DEFERRED / NOT IN SCOPE] — R5:** F-4 y F-5 quedan diferidos sin bloquear CP-B; F-6 es un conjunto de problemas históricos fuera del alcance de B.
 6. **[REVISIÓN R1.1]:** se corrigen AUD-F-1 (etiquetas normativas), AUD-F-2 (estado Git autorreferenciado), AUD-F-3 (autoridad de V4-U06) y AUD-F-4 (distinción entre los flags de purga). Las correcciones son documentales; no cierran las cuestiones técnicas pendientes.
+7. **[REVISIÓN R1.2]:** cierre documental de V4-U06 / DEC-09: se registran el commit publicado, los informes de implementación y auditoría, los 16 criterios AUD-U06 como PASS y tres observaciones INFO no bloqueantes. La aceptación cubre exclusivamente V4-U06; Fase C continúa **BLOCKED**.
 
 ---
 
@@ -49,6 +51,9 @@
 | Remoto | `origin/main` = `53cfd6f…`, alineado con el HEAD local (verificado por la auditoría) |
 | Árbol de trabajo | Limpio (`git status --porcelain` sin salida) durante la auditoría |
 | Publicación de R1 | El propietario realizó personalmente el commit y push del documento; no se atribuye la operación a terceros |
+| Commit de implementación V4-U06 | `99fdbbca72613ca6a2963b3ba22df7b016aff0bc`, hijo de `4b2013136c333f1185a46791f339ce2fee64a208` |
+| Auditoría de V4-U06 | `R13-AUDIT-IMPLEMENTATION-V4-U06-DEC-09-R1`: **ACCEPTED**, AUD-U06-01…16 PASS |
+| Estado actual (R1.2) | `main` en `99fdbbca…`; cambios documentales locales pendientes de publicación por el propietario |
 | DEC-01 a DEC-08 | **APPROVED**, sin modificaciones; no se reabren ni reinterpretan |
 
 ---
@@ -132,16 +137,16 @@ La correspondencia exacta **no es opcional** ni puede sustituirse por la unicida
 
 JSON Schema 2020-12 puede exigir tipo, `minItems` y `uniqueItems` (ya implementado), pero **no puede expresar la permutación entre dos arrays**. Por tanto, la comprobación debe residir en el validador semántico, no en el schema.
 
-### 5.3 Decisión aprobada e implementación pendiente
+### 5.3 Decisión aprobada, implementada y aceptada
 
-**Autoridad normativa (actualización R13-DEC-09-REGISTRATION-R1):** la regla de permutación exacta aparecía originalmente en `docs/aud04b_model_provenance_v4_design.md` §5.3, documento rotulado como propuesta no aprobada, y no formaba parte de DEC-01 a DEC-08. El propietario del proyecto la aprobó expresamente el 2026-11-27 como **DEC-09**, con alcance limitado a V4-U06. La observación documental AUD-F-3 relativa a la ausencia de aprobación queda por ello **resuelta en lo normativo**. La aprobación **no autoriza** modificar código, schema ni tests, ni reabrir Fase B: esos actos requieren autorización técnica separada porque Fase B ya fue auditada y aceptada. Fase C continúa bloqueada.
+**Autoridad normativa y cierre (`R13-DEC-09-REGISTRATION-R1`; `R13-IMPLEMENTATION-V4-U06-DEC-09-R1`; `R13-AUDIT-IMPLEMENTATION-V4-U06-DEC-09-R1`):** la regla de permutación exacta aparecía originalmente en el diseño v4 §5.3, documento rotulado como propuesta no aprobada, y no formaba parte de DEC-01 a DEC-08. El propietario la aprobó expresamente el 2026-11-27 como **DEC-09**, con alcance limitado a V4-U06. Esa aprobación no autorizaba por sí sola cambiar código; posteriormente el propietario concedió una **autorización técnica separada** para reabrir Fase B. La implementación se publicó en el commit `99fdbbca72613ca6a2963b3ba22df7b016aff0bc` y la auditoría independiente emitió **ACCEPTED** con AUD-U06-01…16 PASS. La observación AUD-F-3 queda resuelta en lo normativo y en lo técnico. Fase C continúa bloqueada.
 
 **[RECOMENDACIÓN TÉCNICA]**
 
 1. **Schema:** mantener `minItems: 1` y `uniqueItems: true` en `classes` y `class_order`. No inventar restricciones adicionales en el schema.
 2. **Validador semántico v4:** incorporar en `validate_manifest_v4` la comprobación de que, tras la normalización documentada en §5.3, `class_order` es una permutación exacta de `classes`. Rechazar booleanos, `null`, strings, números fraccionarios, NaN/infinitos y duplicados; `1.0` y `1` se tratan como el mismo valor.
-3. **Fase responsable:** Fase B (es donde el plan sitúa V4-U06). Como Fase B ya fue auditada y aceptada, su reapertura requiere **[PENDIENTE DE AUTORIZACIÓN]** del propietario; hoy está `NOT AUTHORIZED`.
-4. **DEC-09 aprobada**: la regla tiene estatus normativo `APPROVED` desde el 2026-11-27. No se requiere una DEC adicional, pero sí autorización técnica separada para modificar una fase cerrada y ejecutar el cambio en `validate_manifest_v4`.
+3. **Fase responsable:** Fase B (reapertura autorizada y ejecutada). La implementación se publicó en el commit `99fdbbca…` y fue auditada con dictamen `ACCEPTED`; el cierre documental se registra en §12.
+4. **DEC-09 aprobada**: la regla tiene estatus normativo `APPROVED` desde el 2026-11-27. No se requirió una DEC adicional; sí se requirió y obtuvo autorización técnica separada para modificar una fase cerrada y ejecutar el cambio en `validate_manifest_v4`.
 
 ### 5.4 Criterio de aceptación verificable
 
@@ -150,8 +155,9 @@ JSON Schema 2020-12 puede exigir tipo, `minItems` y `uniqueItems` (ya implementa
 - Rechaza tipos no enteros y valores fuera del rango seguro de JCS.
 - El error identifica la ruta `$.target.class_order` y no depende del orden de iteración de los diccionarios.
 - Prueba asociada: extensión de V4-U06 con casos válidos, inválidos y límite `1.0` vs `1`.
+- Verificación independiente: AUD-U06-01 a AUD-U06-16, todos **PASS**; tres observaciones INFO no bloqueantes; sin correcciones requeridas.
 
-**Estado R3: CLOSED en lo normativo (DEC-09 `APPROVED`). Implementación: `PENDING AUTHORIZATION`. Reapertura de Fase B: `NOT AUTHORIZED`. Fase C: `BLOCKED`.**
+**Estado R3: CLOSED en lo normativo (DEC-09 `APPROVED`). Implementación: IMPLEMENTED y ACCEPTED por auditoría (commit `99fdbbca…`). Reapertura de Fase B: autorizada y cerrada para V4-U06. Fase C: `BLOCKED`.**
 
 ---
 
@@ -245,7 +251,7 @@ No se introducen correcciones de código.
 |---|---|---|---|---|
 | R1 — Estado de Fase B | Registrar `ACCEPTED WITH FINDINGS`, CP-B-01…10 PASS, sin Critical/High/Medium; separar aceptación de autorización | Cierre de B (auditoría) | Dictamen e evidencia reproducida en §3 | **CLOSED** |
 | R2 — Discrepancia Git | Aclaración documental: commit/push del propietario; contenido coincide con el alcance | Cierre de B (auditoría) | §4; sin incidencia de autorización | **CLOSED** |
-| R3 — V4-U06 | DEC-09 `APPROVED` (2026-11-27); implementación pendiente de autorización técnica | B (reapertura `NOT AUTHORIZED`) | §5.4: permutación válida/inválida, tipos y rango; sin cambios de código | **CLOSED (normativa) / PENDING AUTHORIZATION (implementación)** |
+| R3 — V4-U06 | DEC-09 `APPROVED`; implementación publicada en `99fdbbca…` y auditada `ACCEPTED` | B (reapertura autorizada y cerrada) | §5.4 y §12: AUD-U06-01…16 PASS; 507 pruebas; Ruff limpio | **CLOSED / IMPLEMENTED / ACCEPTED** |
 | R4a — `label_purge_satisfied`, `disjoint`, `purge_satisfied` | Veracidad derivada de relaciones declaradas; no forzar `true` | D | §6.2–6.3: gaps, solapamiento, banderas coherentes | **DEFERRED** |
 | R4b — `labels_within_partition` | Declaración en D; evidencia efectiva solo con datos | D + verificador posterior | §6.4: sin afirmación de S1 sobre datos no entregados | **DEFERRED** |
 | R4c — `test_evaluated_once` | Valor `true` para admisión; evidencia de ejecución en S6 | B/D + S6 | §6.5: informe con `model_id`, `manifest_sha256`, métricas y evaluación única | **DEFERRED** |
@@ -257,22 +263,22 @@ No se introducen correcciones de código.
 | AUD-F-3 | Autoridad normativa de V4-U06 aclarada: diseño no aprobado, no es DEC; requiere autorización del propietario | Corrección documental R1.1 | §5.3 y §5.4; V4-U06 sigue `PENDING APPROVAL` | **CLOSED** |
 | AUD-F-4 | Distinción documentada entre los dos flags de purga; resolución semántica diferida a D | D | §6.2/§6.3 y nota en §6.6; definir redundancia, alcance, componente y pruebas | **DEFERRED** |
 
-`CLOSED` se refiere únicamente a la corrección documental. No cierra la implementación de V4-U06 ni la resolución técnica de la duplicidad de flags.
+`CLOSED` se refiere únicamente a la corrección documental. V4-U06 quedó además implementada, auditada y cerrada en R1.2 (§12); la resolución técnica de la duplicidad de flags sigue pendiente en Fase D.
 
 ---
 
 ## 9. Modificaciones registradas y pendientes
 
-**[RECOMENDACIÓN TÉCNICA — IMPLEMENTACIÓN PENDIENTE DE AUTORIZACIÓN]**
+**[RECOMENDACIÓN TÉCNICA — ALCANCE YA EJECUTADO PARA V4-U06]**
 
-Nota: el registro `R13-DEC-09-REGISTRATION-R1` ya incorporó DEC-09 y actualizó la fila V4-U06 del plan. Las acciones de implementación siguen sin autorizar.
+Nota: en R1.1 la implementación seguía sin autorizar. En R1.2 se registró la autorización técnica posterior, la publicación en `99fdbbca…` y el dictamen `ACCEPTED`; V4-U06 quedó cerrada.
 
-1. **§5 Fase B, ítems 2 y 5:** añadir explícitamente la comprobación semántica de permutación `class_order` ↔ `classes` y su prueba negativa. Hoy el ítem 2 enumera patrones y tipos, no relaciones entre arrays. **Pendiente de autorización técnica.**
-2. **§6.1 fila V4-U06:** ya actualizada para distinguir `APPROVED` (DEC-09) de `PENDING AUTHORIZATION` y `NOT AUTHORIZED` para la reapertura de Fase B. **Cerrada documentalmente.**
+1. **§5 Fase B, ítems 2 y 5:** la comprobación semántica de permutación `class_order` ↔ `classes` y sus pruebas negativas quedaron implementadas y auditadas. **Cerrado.**
+2. **§6.1 fila V4-U06:** actualizada en R1.2 para registrar `ACCEPTED`, commit, informes y 16 criterios PASS. **Cerrada documentalmente.**
 3. **§5 Fase B / Fase D:** precisar que los flags derivados se comprueban en D y que `test_evaluated_once` requiere evidencia de S6, fuera de A–G.
 4. **§9 Aplazamientos:** registrar la verificación de evidencia de `test_evaluated_once` y de `labels_within_partition` como capacidades posteriores con interfaz y criterios propios.
 
-**No se modifica el plan en esta tarea.** Cualquier cambio debe ser autorizado por el propietario.
+En R1.1 el plan no se modificó; en R1.2 se actualizó únicamente la fila V4-U06 y se añadió §13 para registrar el cierre, conforme a la autorización documental recibida. Cualquier cambio posterior sigue requiriendo autorización del propietario.
 
 ---
 
@@ -284,23 +290,81 @@ Nota: el registro `R13-DEC-09-REGISTRATION-R1` ya incorporó DEC-09 y actualizó
 | DEC-09 registrada | Confirmado: `APPROVED` el 2026-11-27 por el propietario; desarrolla V4-U06 sin modificar DEC-01 a DEC-08 |
 | Decisiones propuestas sin contradecir DEC aprobadas | Confirmado: R3/R4 desarrollan requisitos presentes en la spec; DEC-09 es la única decisión nueva |
 | Aceptación de CP-B no presentada como autorización de Fase C | Confirmado: Fase C sigue BLOQUEADA |
+| V4-U06 cerrada sin autorizar otras fases | Confirmado: §12 registra ACCEPTED solo para V4-U06; Fase C continúa BLOCKED |
 | Recomendaciones no presentadas como decisiones aprobadas | Confirmado: marcadas `[RECOMENDACIÓN TÉCNICA]` / `[PENDIENTE DE APROBACIÓN]` |
 | Nombres de fases y V4-Uxx correctos | Confirmado contra plan R1.1 y diseño v4 |
-| Archivos modificados | En R1.1: solo el presente documento (commit `53cfd6f…`). En este registro DEC-09: documento de aprobación, plan R1.1 y el presente documento; sin cambios de código, schema ni tests |
+| Archivos modificados | En R1.1: solo el presente documento (commit `53cfd6f…`). En el registro DEC-09: aprobación, plan R1.1 y presente documento. En R1.2: plan R1.1 y presente documento; sin cambios de código, schema ni tests |
 
 ---
 
 ## 11. Informe final — R13-DECISION-RESOLUTION-R1
 
 1. **Archivo creado:** `docs/r13_decision_resolution_r1.md`.
-2. **Hallazgos resueltos y pendientes:** R1 y R2 **CLOSED**; R3 **CLOSED en lo normativo** y **PENDING AUTHORIZATION** en lo técnico; R4 **DEFERRED**; F-4 y F-5 **DEFERRED**; F-6 **NOT IN SCOPE**.
-3. **DEC-09 aprobada:** V4-U06 exige la permutación exacta en el validador semántico v4, manteniendo `minItems`/`uniqueItems` en el schema. La aprobación es normativa; la implementación en Fase B requiere autorización técnica separada y no se ha realizado.
+2. **Hallazgos resueltos y pendientes:** R1 y R2 **CLOSED**; R3 **CLOSED / IMPLEMENTED / ACCEPTED**; R4 **DEFERRED**; F-4 y F-5 **DEFERRED**; F-6 **NOT IN SCOPE**.
+3. **DEC-09 aprobada y V4-U06 cerrada:** la permutación exacta se implementó en el validador semántico v4, se publicó en `99fdbbca…` y fue auditada con dictamen `ACCEPTED`. La aprobación normativa, la autorización técnica, la publicación del código y el cierre documental se distinguen en §12.
 4. **Tratamiento recomendado de los flags:** ninguno se fuerza a `true`; veracidad derivada en Fase D para purga/leakage; `labels_within_partition` solo afirmable con datos por verificador posterior; `test_evaluated_once` exige informe de evaluación única verificado en S6.
 5. **Matriz de trazabilidad:** sección 8.
-6. **Modificaciones futuras al plan R1.1:** sección 9, todas pendientes de autorización.
+6. **Modificaciones al plan:** sección 9; V4-U06 quedó registrada como cerrada en R1.2, el resto sigue pendiente.
 7. **Confirmación:** no se modificó código, schema, tests, fixtures, dependencias, modelos ni datasets; no se leyeron ni procesaron los Parquet protegidos.
 8. **Confirmación Git:** el propietario publicó el documento R1 mediante el commit `53cfd6f28a169f2e71edf557e66b7c4f5ea17a1d` y el correspondiente push; la auditoría verificó HEAD local y remoto alineados en `53cfd6f…` y árbol limpio. La redacción original de este apartado describía el estado anterior a esa publicación y ha sido corregida en R1.1.
 
 **Clasificación: COMPLETADO.** La resolución distingue lo aprobado, lo aceptado por auditoría, lo recomendado técnicamente y lo que requiere aprobación del propietario. **Fase C permanece BLOQUEADA hasta autorización explícita.**
 
 **Fin de R13-DECISION-RESOLUTION-R1.**
+
+---
+
+## 12. R13-DECISION-RESOLUTION-R1.2 — Cierre documental de V4-U06 / DEC-09
+
+### 12.1 Resultado
+
+**Cierre documental COMPLETADO.** No es una nueva aprobación normativa ni una autorización de fase: registra que V4-U06 / DEC-09 fue implementada, publicada y auditada favorablemente.
+
+| Elemento | Registro |
+|---|---|
+| Aceptación normativa | DEC-09 APPROVED, 2026-11-27, propietario del proyecto |
+| Aceptación técnica | V4-U06 ACCEPTED, informe `R13-AUDIT-IMPLEMENTATION-V4-U06-DEC-09-R1`, AUD-U06-01…16 PASS |
+| Publicación del código | Commit `99fdbbca72613ca6a2963b3ba22df7b016aff0bc`, padre `4b2013136c333f1185a46791f339ce2fee64a208` |
+| Cierre documental | R1.2: plan R1.1 fila V4-U06 y §13; resolución R1.2 §§1, 2, 5, 8, 9, 10, 11 y 12 |
+| Alcance | Exclusivamente V4-U06 / DEC-09 |
+
+### 12.2 Distinción de conceptos
+
+| Concepto | Estado | Evidencia |
+|---|---|---|
+| Aprobación normativa de DEC-09 | APPROVED desde 2026-11-27 | `R13-DEC-09-REGISTRATION-R1`, aprobación §3 DEC-09 |
+| Autorización técnica de implementación | Concedida posteriormente por el propietario | Reapertura limitada de Fase B; informe de implementación |
+| Publicación del código | Realizada | Commit `99fdbbca…`; 148 inserciones en dos archivos |
+| Verificación independiente | ACCEPTED | 16 criterios PASS; tres observaciones INFO; sin correcciones |
+| Cierre documental | Realizado en R1.2 | Este documento y plan §13 |
+
+### 12.3 Evidencia de verificación
+
+- Informe de implementación: `R13-IMPLEMENTATION-V4-U06-DEC-09-R1`.
+- Informe de auditoría: `R13-AUDIT-IMPLEMENTATION-V4-U06-DEC-09-R1`, dictamen **ACCEPTED**.
+- Pruebas: 37 + 29 + 116 + 507 superadas; Ruff sin diagnósticos; `git diff --check` exit `0`.
+- `_validate_manifest_v3`: cuerpo ejecutable idéntico al de la base `4b201313…`.
+- Observaciones INFO no bloqueantes: atribución del error a `$.target.class_order` cuando el origen es `classes`; ausencia de error DEC-09 específico si `target` no es objeto; coexistencia de errores de schema y DEC-09. Ninguna requirió corrección.
+
+### 12.4 Matrices actualizadas
+
+| Documento | Sección | Actualización |
+|---|---|---|
+| Plan R1.1 | §6.1 fila V4-U06 | `ACCEPTED`, commit, informes y 16 criterios PASS |
+| Plan R1.1 | §13 (nueva) | Cierre documental, evidencia, INFO y alcance exclusivo |
+| Resolución R1.1 | §1, §2, §5.3, §5.4, §8, §9, §10, §11 | R3 como `CLOSED / IMPLEMENTED / ACCEPTED`; trazabilidad y alcance |
+| Resolución R1.1 | §12 (nueva) | Registro formal del cierre R1.2 |
+
+### 12.5 Estado Git y límites
+
+| Ítem | Resultado |
+|---|---|
+| HEAD inicial y final de R1.2 | `99fdbbca72613ca6a2963b3ba22df7b016aff0bc` (idéntico; sin commits nuevos) |
+| Documentos modificados | `docs/aud04b_model_provenance_v4_implementation_plan_r1.md` y `docs/r13_decision_resolution_r1.md` |
+| Publicación | Sin push; el propietario publicará tras revisar |
+| Código, schema, tests y dependencias | Sin cambios en esta tarea |
+| Fase C | **BLOCKED**; la aceptación de V4-U06 no autoriza iniciarla ni ninguna otra fase |
+
+**Clasificación: COMPLETADO** para el cierre documental. V4-U06 queda **IMPLEMENTED / ACCEPTED**; Fase C continúa **BLOQUEADA**.
+
+**Fin de R13-DECISION-RESOLUTION-R1.2.**
