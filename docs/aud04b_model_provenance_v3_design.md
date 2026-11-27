@@ -26,6 +26,7 @@
 13. Plan de pruebas
 14. Decisiones pendientes
 15. Criterios de aceptación
+16. Nota de transición documental a provenance 4.0.0
 
 ---
 
@@ -1806,3 +1807,23 @@ Ninguna de estas decisiones se resuelve en AUD-04B.1. Las que bloquean S1 son D0
 - El único archivo nuevo es `docs/aud04b_model_provenance_v3_design.md`.
 
 **AUD-04B.1 termina aquí.** No se inicia AUD-04B.2, no se implementa el contrato y no se elige ningún modelo. A la espera de autorización expresa.
+
+---
+
+## 16. Nota de transición documental a provenance 4.0.0
+
+**Anexo documental posterior.** Esta sección se añade después de cerrar el diseño histórico AUD-04B.1. No modifica ni reinterpreta los §§1–15, sus decisiones pendientes, sus ejemplos ni la verificación final.
+
+El contrato descrito en este documento se conserva como la especificación histórica **3.0.0**:
+
+- Sus campos, reglas de canonicalización y proyección de fingerprint no cambian retroactivamente.
+- No se añaden campos obligatorios a manifiestos 3.0.0.
+- Cada fingerprint 3.0.0 conserva la proyección que correspondía a esa versión.
+- Ningún manifiesto 3.0.0 se convierte automáticamente en 4.0.0.
+- La capacidad futura de leer o validar un manifiesto 3.0.0 no implica que cumpla los requisitos propuestos para 4.0.0.
+
+La propuesta normativa para **4.0.0** se mantiene en un documento separado: **docs/aud04b_model_provenance_v4_design.md**. Las diferencias que allí se proponen —incluidos los límites de posición fuente, el contrato de purga, la restricción de calibration, las reglas de lifecycle y la proyección del fingerprint— no forman parte del contrato 3.0.0.
+
+La transición recomendada es explícita: seleccionar esquema y reglas mediante **schema_version**; conservar un lector/validador 3.0.0 separado del futuro 4.0.0; no reescribir manifiestos existentes; y no declarar implementado el dispatch por versión hasta que exista implementación y verificación independiente.
+
+**Estado de aprobación:** esta nota documenta una transición propuesta. No aprueba S1, no autoriza inferencia, no autoriza R13-IMPLEMENTATION y no inicia S2.
