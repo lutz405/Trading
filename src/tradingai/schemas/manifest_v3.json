@@ -30,7 +30,7 @@
     },
     "model_id": {
       "type": "string",
-      "pattern": "^mdl_[0-9A-HJKMNP-TV-Z]{26}$"
+      "pattern": "^mdl_[0-7][0-9A-HJKMNP-TV-Z]{25}$"
     },
     "created_at": {
       "type": "string",

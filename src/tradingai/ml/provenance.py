@@ -125,16 +125,18 @@ def validate_rfc3339(value: str, require_utc: bool = False) -> bool:
 
 # Validator functions
 def validate_model_id(model_id: object) -> bool:
-    """Validate model_id format: ^mdl_[0-9A-HJKMNP-TV-Z]{26}$"""
+    """Validate model_id format: ^mdl_[0-7][0-9A-HJKMNP-TV-Z]{26}$"""
     if not isinstance(model_id, str):
         return False
-    return bool(re.match(r'^mdl_[0-9A-HJKMNP-TV-Z]{26}$', model_id))
+    # ULID first character must be 0-7 (128-bit range constraint)
+    return bool(re.match(r'^mdl_[0-7][0-9A-HJKMNP-TV-Z]{25}$', model_id))
 
 def validate_event_id(event_id: object) -> bool:
-    """Validate event_id format: evt_ + ULID (26 chars)."""
+    """Validate event_id format: evt_ + ULID (26 chars), first char 0-7."""
     if not isinstance(event_id, str):
         return False
-    return bool(re.match(r'^evt_[0-9A-HJKMNP-TV-Z]{26}$', event_id))
+    # ULID first character must be 0-7 (128-bit range constraint)
+    return bool(re.match(r'^evt_[0-7][0-9A-HJKMNP-TV-Z]{25}$', event_id))
 
 def validate_sha256(value: object) -> bool:
     """Validate SHA-256 hex string (64 chars)."""

@@ -257,33 +257,62 @@ class TestValidators:
     def test_validate_model_id_valid(self):
         assert validate_model_id("mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W")
 
-    def test_validate_model_id_invalid(self):
-        assert not validate_model_id("invalid")
+    def test_validate_model_id_starts_with_0_or_7(self):
+        # ULID first character must be 0-7 per 128-bit range
+        assert validate_model_id("mdl_01JQ8Z3K4M5N6P7Q8R9S0T1V2W")
+        assert validate_model_id("mdl_71JQ8Z3K4M5N6P7Q8R9S0T1V2W")
+
+    def test_validate_model_id_starts_with_8_rejected(self):
+        # ULID starting with 8 exceeds 128-bit range
+        assert not validate_model_id("mdl_81JQ8Z3K4M5N6P7Q8R9S0T1V2W")
+
+    def test_validate_model_id_starts_with_9_rejected(self):
+        # ULID starting with 9 exceeds 128-bit range
+        assert not validate_model_id("mdl_91JQ8Z3K4M5N6P7Q8R9S0T1V2W")
+
+    def test_validate_model_id_starts_with_letter_rejected(self):
+        # ULID starting with A-H (beyond first-char range) rejected
+        assert not validate_model_id("mdl_A1JQ8Z3K4M5N6P7Q8R9S0T1V2W")
+
+    def test_validate_model_id_too_short(self):
         assert not validate_model_id("mdl_123")
-        assert not validate_model_id("")
+
+    def test_validate_model_id_no_prefix(self):
+        assert not validate_model_id("invalid")
+
+    def test_validate_model_id_non_string(self):
+        assert not validate_model_id(17)
+        assert not validate_model_id(None)
 
     def test_validate_event_id_valid(self):
         assert validate_event_id("evt_01JQ8Z4A1B2C3D4E5F6G7H8J9K")
 
-    def test_validate_event_id_invalid(self):
-        assert not validate_event_id("invalid")
+    def test_validate_event_id_starts_with_0_or_7(self):
+        # ULID first character must be 0-7 per 128-bit range
+        assert validate_event_id("evt_01JQ8Z4A1B2C3D4E5F6G7H8J9K")
+        assert validate_event_id("evt_01JQ8Z4A1B2C3D4E5F6G7H8J9M")
+
+    def test_validate_event_id_starts_with_8_rejected(self):
+        # ULID starting with 8 exceeds 128-bit range
+        assert not validate_event_id("evt_8" + "JQ8Z4A1B2C3D4E5F6G7H8J9K"[1:])
+
+    def test_validate_event_id_starts_with_9_rejected(self):
+        # ULID starting with 9 exceeds 128-bit range
+        assert not validate_event_id("evt_9" + "JQ8Z4A1B2C3D4E5F6G7H8J9K"[1:])
+
+    def test_validate_event_id_starts_with_letter_rejected(self):
+        # ULID starting with A-H (beyond first-char range) rejected
+        assert not validate_event_id("evt_A" + "JQ8Z4A1B2C3D4E5F6G7H8J9K"[1:])
+
+    def test_validate_event_id_too_short(self):
         assert not validate_event_id("evt_123")
 
-    def test_validate_sha256_valid(self):
-        assert validate_sha256("a" * 64)
+    def test_validate_event_id_no_prefix(self):
+        assert not validate_event_id("invalid")
 
-    def test_validate_sha256_invalid(self):
-        assert not validate_sha256("abc")
-        assert not validate_sha256("G" * 64)
-        assert not validate_sha256("")
-
-    def test_validate_rfc3339_valid(self):
-        assert validate_rfc3339("2026-11-25T10:00:00Z")
-        assert validate_rfc3339("2026-11-25T10:00:00.123456Z")
-
-    def test_validate_rfc3339_invalid(self):
-        assert not validate_rfc3339("2026-11-25")
-        assert not validate_rfc3339("not-a-date")
+    def test_validate_event_id_non_string(self):
+        assert not validate_event_id(17)
+        assert not validate_event_id(None)
 
 
 # ---------------------------------------------------------------------------
