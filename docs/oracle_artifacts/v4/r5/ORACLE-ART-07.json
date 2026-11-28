@@ -1,0 +1,107 @@
+{
+  "artifact": "ORACLE-ART-07",
+  "control": {
+    "detection": {
+      "detected_paths": [],
+      "expected_paths": [
+        "calibration.base_artifact_sha256.rf",
+        "calibration.base_artifact_sha256.xgb",
+        "calibration.base_model_id"
+      ],
+      "status": "NOT_DETECTED",
+      "version": "ORACLE_NORMATIVE_V4_R5"
+    },
+    "errors": [],
+    "repeat_detection": {
+      "detected_paths": [],
+      "expected_paths": [
+        "calibration.base_artifact_sha256.rf",
+        "calibration.base_artifact_sha256.xgb",
+        "calibration.base_model_id"
+      ],
+      "status": "NOT_DETECTED",
+      "version": "ORACLE_NORMATIVE_V4_R5"
+    },
+    "result": "NO_MUTATION_NOT_DETECTED_EXPECTED"
+  },
+  "detection_status": "DETECTED",
+  "determinism": {
+    "control_repeat": true,
+    "mutation_repeat": true
+  },
+  "isolation": {
+    "copies_only": true,
+    "dataset_files_modified": false,
+    "original_restored": true,
+    "post_context_errors": [],
+    "production_files_modified": false
+  },
+  "mechanism": "tests/oracle_verification_representation_v4_r5.py::isolated_external_run_only_mutation",
+  "mutation": {
+    "applied": "always",
+    "detection": {
+      "detected_paths": [
+        "calibration.base_artifact_sha256.rf",
+        "calibration.base_artifact_sha256.xgb",
+        "calibration.base_model_id"
+      ],
+      "expected_paths": [
+        "calibration.base_artifact_sha256.rf",
+        "calibration.base_artifact_sha256.xgb",
+        "calibration.base_model_id"
+      ],
+      "status": "DETECTED",
+      "version": "ORACLE_NORMATIVE_V4_R5"
+    },
+    "repeat_detection": {
+      "detected_paths": [
+        "calibration.base_artifact_sha256.rf",
+        "calibration.base_artifact_sha256.xgb",
+        "calibration.base_model_id"
+      ],
+      "expected_paths": [
+        "calibration.base_artifact_sha256.rf",
+        "calibration.base_artifact_sha256.xgb",
+        "calibration.base_model_id"
+      ],
+      "status": "DETECTED",
+      "version": "ORACLE_NORMATIVE_V4_R5"
+    },
+    "result": "DETECTED",
+    "state_before": "external_run_only"
+  },
+  "mutation_field": "projection_include_when",
+  "mutation_paths": [
+    "calibration.base_model_id",
+    "calibration.base_artifact_sha256.rf",
+    "calibration.base_artifact_sha256.xgb"
+  ],
+  "negative_controls": {
+    "incomplete_mutation": {
+      "detected_paths": [
+        "calibration.base_artifact_sha256.xgb",
+        "calibration.base_model_id"
+      ],
+      "expected_paths": [
+        "calibration.base_artifact_sha256.rf",
+        "calibration.base_artifact_sha256.xgb",
+        "calibration.base_model_id"
+      ],
+      "status": "NOT_DETECTED",
+      "version": "ORACLE_NORMATIVE_V4_R5"
+    },
+    "no_mutation": {
+      "detected_paths": [],
+      "expected_paths": [
+        "calibration.base_artifact_sha256.rf",
+        "calibration.base_artifact_sha256.xgb",
+        "calibration.base_model_id"
+      ],
+      "status": "NOT_DETECTED",
+      "version": "ORACLE_NORMATIVE_V4_R5"
+    },
+    "result": "NO_PASS_ON_ABSENT_OR_AMBIGUOUS_DETECTION"
+  },
+  "status": "CREATED_UNVERIFIED",
+  "version": "ORACLE_NORMATIVE_V4_R5"
+}
